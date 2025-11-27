@@ -1,0 +1,164 @@
+import { query } from '../config/database';
+import * as jolpiService from '../services/jolpiService';
+import { calculateRacePoints } from '../controllers/leaderboardController';
+import { sendFinalResults } from '../services/emailService';
+
+async function processFinalResults() {
+  try {
+    console.log('[CRON] Starting final results processing...');
+    const season = 2025;
+
+    // Find races that are 24+ hours old and haven't had final results processed
+    const racesResult = await query(
+      `SELECT r.id, r.season, r.round, r.race_name, r.race_date, r.race_type
+       FROM races r
+       WHERE r.season = $1
+         AND r.race_date < NOW() - INTERVAL '24 hours'
+         AND r.final_results_processed = FALSE
+         AND r.status = 'provisional'
+       ORDER BY r.race_date DESC`,
+      [season]
+    );
+
+    const races = racesResult.rows;
+
+    if (races.length === 0) {
+      console.log('[CRON] No races need final results processing');
+      process.exit(0);
+      return;
+    }
+
+    console.log(`[CRON] Found ${races.length} race(s) needing final results processing`);
+
+    for (const race of races) {
+      try {
+        const isSprint = race.race_type === 'sprint';
+        const predictionTable = isSprint ? 'sprint_predictions' : 'predictions';
+        console.log(`[CRON] Processing final results for ${race.race_name} (${isSprint ? 'Sprint' : 'Main'})...`);
+
+        // Store current prediction points before recalculating
+        const previousPointsResult = await query(
+          `SELECT p.user_id, p.points_earned, u.email, u.nickname
+           FROM ${predictionTable} p
+           JOIN users u ON p.user_id = u.id
+           WHERE p.race_id = $1`,
+          [race.id]
+        );
+        const previousPointsMap = new Map(
+          previousPointsResult.rows.map((r: any) => [r.user_id, {
+            points: r.points_earned,
+            email: r.email,
+            nickname: r.nickname
+          }])
+        );
+
+        // Fetch fresh results from API (may include disqualifications)
+        const jolpiResults = isSprint
+          ? await jolpiService.getSprintResults(race.season, race.round)
+          : await jolpiService.getRaceResults(race.season, race.round);
+
+        if (jolpiResults.length === 0) {
+          console.log(`[CRON] ⚠ No results available for ${race.race_name}`);
+          continue;
+        }
+
+        // Build driver lookup map
+        const driverNumbers = jolpiResults.map((r: any) => parseInt(r.number));
+        const driversResult = await query(
+          'SELECT id, driver_number FROM drivers WHERE driver_number = ANY($1) AND season = $2',
+          [driverNumbers, race.season]
+        );
+        const driverMap = new Map(driversResult.rows.map((d: any) => [d.driver_number, d.id]));
+
+        // Clear existing results
+        await query('DELETE FROM race_results WHERE race_id = $1', [race.id]);
+
+        // Insert fresh results (with any DQs applied)
+        for (const result of jolpiResults) {
+          const driverNumber = parseInt(result.number);
+          const driverId = driverMap.get(driverNumber);
+
+          if (driverId) {
+            await query(
+              `INSERT INTO race_results (race_id, driver_id, position, points, status)
+               VALUES ($1, $2, $3, $4, $5)`,
+              [race.id, driverId, parseInt(result.position), parseFloat(result.points), result.status]
+            );
+          }
+        }
+
+        // Reset user total points contribution from this race
+        // We need to subtract old points before adding new
+        const oldPredictions = await query(
+          `SELECT user_id, points_earned FROM ${predictionTable} WHERE race_id = $1`,
+          [race.id]
+        );
+
+        for (const pred of oldPredictions.rows) {
+          await query(
+            'UPDATE users SET total_points = total_points - $1 WHERE id = $2',
+            [pred.points_earned, pred.user_id]
+          );
+        }
+
+        // Reset prediction points
+        await query(
+          `UPDATE ${predictionTable} SET points_earned = 0, is_locked = FALSE WHERE race_id = $1`,
+          [race.id]
+        );
+
+        // Recalculate all points with final results
+        await calculateRacePoints(race.id);
+
+        // Update race status to completed
+        await query(
+          `UPDATE races SET status = 'completed', final_results_processed = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+          [race.id]
+        );
+
+        // Get new points and send emails
+        const newPredictions = await query(
+          `SELECT p.user_id, p.points_earned, u.email, u.nickname
+           FROM ${predictionTable} p
+           JOIN users u ON p.user_id = u.id
+           WHERE p.race_id = $1`,
+          [race.id]
+        );
+
+        console.log(`[CRON] Sending final results to ${newPredictions.rows.length} users...`);
+
+        for (const pred of newPredictions.rows) {
+          try {
+            const previousData = previousPointsMap.get(pred.user_id);
+            const previousPoints = previousData?.points || 0;
+            const hasChanges = previousPoints !== pred.points_earned;
+
+            await sendFinalResults(
+              pred.email,
+              pred.nickname,
+              race.race_name,
+              pred.points_earned,
+              hasChanges,
+              hasChanges ? previousPoints : undefined
+            );
+          } catch (emailError) {
+            console.error(`[CRON] Error sending final results email to ${pred.email}:`, emailError);
+          }
+        }
+
+        console.log(`[CRON] ✓ Final results processed for ${race.race_name}`);
+
+      } catch (error) {
+        console.error(`[CRON] ✗ Error processing ${race.race_name}:`, error);
+      }
+    }
+
+    console.log('[CRON] Final results processing completed');
+    process.exit(0);
+  } catch (error) {
+    console.error('[CRON] Error in final results processing:', error);
+    process.exit(1);
+  }
+}
+
+processFinalResults();

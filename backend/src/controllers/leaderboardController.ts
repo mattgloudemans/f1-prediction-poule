@@ -1,0 +1,183 @@
+import { Request, Response } from 'express';
+import { query } from '../config/database';
+
+export const getLeaderboard = async (req: Request, res: Response) => {
+  try {
+    const result = await query(
+      `SELECT
+        id, nickname, avatar_url, total_points,
+        ROW_NUMBER() OVER (ORDER BY total_points DESC) as rank
+       FROM users
+       ORDER BY total_points DESC, nickname ASC`
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get leaderboard error:', error);
+    res.status(500).json({ error: 'Failed to get leaderboard' });
+  }
+};
+
+export const getTopThree = async (req: Request, res: Response) => {
+  try {
+    const result = await query(
+      `SELECT
+        id, nickname, avatar_url, total_points,
+        ROW_NUMBER() OVER (ORDER BY total_points DESC) as rank
+       FROM users
+       ORDER BY total_points DESC, nickname ASC
+       LIMIT 3`
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get top three error:', error);
+    res.status(500).json({ error: 'Failed to get top three' });
+  }
+};
+
+export const getUserRank = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+
+    // Use window function for efficient rank calculation (handles ties properly)
+    const result = await query(
+      `SELECT id, nickname, avatar_url, total_points, rank FROM (
+        SELECT
+          id, nickname, avatar_url, total_points,
+          DENSE_RANK() OVER (ORDER BY total_points DESC) as rank
+        FROM users
+      ) ranked
+      WHERE id = $1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Get user rank error:', error);
+    res.status(500).json({ error: 'Failed to get user rank' });
+  }
+};
+
+// F1 points systems
+const mainPointsMap: { [key: number]: number } = {
+  1: 25, 2: 18, 3: 15, 4: 12, 5: 10, 6: 8, 7: 6, 8: 4, 9: 2, 10: 1
+};
+
+const sprintPointsMap: { [key: number]: number } = {
+  1: 8, 2: 7, 3: 6, 4: 5, 5: 4, 6: 3, 7: 2, 8: 1
+};
+
+// Calculate points for all users after a race is completed
+export const calculateRacePoints = async (raceId: number) => {
+  try {
+    // Get race info to determine type
+    const raceQuery = await query('SELECT race_type FROM races WHERE id = $1', [raceId]);
+    if (raceQuery.rows.length === 0) {
+      console.log('Race not found:', raceId);
+      return;
+    }
+    const raceType = raceQuery.rows[0].race_type || 'main';
+    const isSprint = raceType === 'sprint';
+
+    // Get race results
+    const resultsQuery = await query(
+      'SELECT * FROM race_results WHERE race_id = $1 ORDER BY position ASC',
+      [raceId]
+    );
+
+    const results = resultsQuery.rows;
+
+    if (results.length === 0) {
+      console.log('No race results found for race:', raceId);
+      return;
+    }
+
+    // Get predictions from appropriate table
+    const predictionTable = isSprint ? 'sprint_predictions' : 'predictions';
+    const predictionsQuery = await query(
+      `SELECT * FROM ${predictionTable} WHERE race_id = $1`,
+      [raceId]
+    );
+
+    const predictions = predictionsQuery.rows;
+
+    // Use appropriate points system
+    const pointsMap = isSprint ? sprintPointsMap : mainPointsMap;
+    const maxPositions = isSprint ? 8 : 10;
+    const scoringPositions = isSprint ? 8 : 10;
+
+    // Calculate points for all predictions
+    const predictionUpdates: { id: number; points: number; userId: number }[] = [];
+
+    for (const prediction of predictions) {
+      let pointsEarned = 0;
+
+      // Check each position
+      for (let predictedPos = 1; predictedPos <= maxPositions; predictedPos++) {
+        const predictedDriverId = prediction[`position_${predictedPos}`];
+
+        // Find the actual position of the predicted driver
+        const actualResult = results.find((r: any) => r.driver_id === predictedDriverId);
+
+        if (actualResult && actualResult.position <= scoringPositions) {
+          const basePoints = pointsMap[actualResult.position] || 0;
+          const actualPos = actualResult.position;
+          const posDiff = Math.abs(predictedPos - actualPos);
+
+          if (posDiff <= 1) {
+            // Exact position or one off: 50% bonus
+            pointsEarned += Math.round(basePoints * 1.5);
+          } else {
+            // More than one off: base points only
+            pointsEarned += basePoints;
+          }
+        }
+      }
+
+      predictionUpdates.push({ id: prediction.id, points: pointsEarned, userId: prediction.user_id });
+    }
+
+    // Batch update predictions (single query instead of N queries)
+    if (predictionUpdates.length > 0) {
+      const predictionIds = predictionUpdates.map(p => p.id);
+      const pointsCases = predictionUpdates.map(p => `WHEN ${p.id} THEN ${p.points}`).join(' ');
+
+      await query(
+        `UPDATE ${predictionTable}
+         SET points_earned = CASE id ${pointsCases} END,
+             is_locked = TRUE
+         WHERE id = ANY($1)`,
+        [predictionIds]
+      );
+
+      // Batch update user points (aggregate points per user first)
+      const userPointsMap = new Map<number, number>();
+      for (const update of predictionUpdates) {
+        userPointsMap.set(update.userId, (userPointsMap.get(update.userId) || 0) + update.points);
+      }
+
+      // Single query to update all user points
+      const userIds = Array.from(userPointsMap.keys());
+      const userPointsCases = Array.from(userPointsMap.entries())
+        .map(([userId, points]) => `WHEN ${userId} THEN total_points + ${points}`)
+        .join(' ');
+
+      await query(
+        `UPDATE users
+         SET total_points = CASE id ${userPointsCases} END
+         WHERE id = ANY($1)`,
+        [userIds]
+      );
+    }
+
+    console.log(`Points calculated for ${predictions.length} ${raceType} predictions for race ${raceId}`);
+  } catch (error) {
+    console.error('Calculate race points error:', error);
+    throw error;
+  }
+};

@@ -1,0 +1,18 @@
+# Sync driver standings twice weekly: Monday and Thursday at 9:00 AM UTC
+# This covers both regular race weekends (Sunday) and sprint weekends (Saturday)
+0 9 * * 1,4 /app/sync-driver-standings.sh
+
+# COPY MISSING PREDICTIONS: Check every 2 minutes on race days (Sun 12:00-18:00 UTC)
+# Copies last prediction for users who forgot to submit
+*/2 12-18 * * 0 /app/copy-missing-predictions.sh
+
+# PROVISIONAL RESULTS: Check every 5 minutes on race days (Sun 12:00-20:00 UTC)
+# Sends provisional results email ~5 minutes after race ends
+*/5 12-20 * * 0 /app/send-provisional-results.sh
+
+# FINAL RESULTS: Process 24 hours after race (Mon 12:00-20:00 UTC)
+# Recalculates points considering disqualifications/penalties
+0 12-20 * * 1 /app/process-final-results.sh
+
+# Log rotation to prevent log file from growing too large
+0 0 * * 0 echo "" > /var/log/cron.log
