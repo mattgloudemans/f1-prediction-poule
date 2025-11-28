@@ -112,4 +112,23 @@ export const uploadAvatar = (file: File) => {
 export const deleteAvatar = () =>
   api.delete('/api/upload/avatar');
 
+// Stats
+export const getCompletedRaces = (season?: number) =>
+  api.get('/api/stats/races', { params: { season } });
+
+export const getSeasonStats = (season?: number) =>
+  api.get('/api/stats/summary', { params: { season } });
+
+export const getPracticeResults = (round: number, session: 1 | 2 | 3, season?: number) =>
+  api.get(`/api/stats/practice/${round}/${session}`, { params: { season } });
+
+export const getQualifyingResultsStats = (round: number, season?: number) =>
+  api.get(`/api/stats/qualifying/${round}`, { params: { season } });
+
+export const getRaceResultsStats = (round: number, season?: number) =>
+  api.get(`/api/stats/race/${round}`, { params: { season } });
+
+export const getSprintResultsStats = (round: number, season?: number) =>
+  api.get(`/api/stats/sprint/${round}`, { params: { season } });
+
 export default api;

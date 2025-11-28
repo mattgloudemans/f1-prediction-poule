@@ -15,6 +15,7 @@ import Profile from './pages/Profile';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import About from './pages/About';
 import MyPredictions from './pages/MyPredictions';
+import Stats from './pages/Stats';
 import { AuthContext } from './context/AuthContext';
 import { getProfile } from './services/api';
 
@@ -72,6 +73,7 @@ function App() {
               <Route path="/admin" element={<Admin />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/predictions" element={<MyPredictions />} />
+              <Route path="/stats" element={<Stats />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/about" element={<About />} />
             </Routes>
