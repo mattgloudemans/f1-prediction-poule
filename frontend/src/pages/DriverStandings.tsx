@@ -21,7 +21,7 @@ const DriverStandings = () => {
 
   const fetchDriverStandings = async () => {
     try {
-      const response = await getDriverStandings(2025);
+      const response = await getDriverStandings(2026);
       setDrivers(response.data.drivers || response.data);
       setLastUpdated(response.data.lastUpdated || null);
     } catch (error) {
@@ -129,7 +129,7 @@ const DriverStandings = () => {
   return (
     <div>
       <h1 className="text-4xl md:text-display-xl font-bold mb-4 text-center text-gradient-red">
-        2025 Driver's Championship
+        2026 Driver's Championship
       </h1>
 
       {/* Update Information - Compact */}

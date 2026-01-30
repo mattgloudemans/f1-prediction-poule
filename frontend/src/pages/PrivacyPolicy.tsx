@@ -5,7 +5,7 @@ const PrivacyPolicy = () => {
         <h1 className="text-4xl font-bold mb-6 text-gradient-red">Privacy Policy</h1>
 
         <p className="text-f1-gray mb-6">
-          <strong>Last Updated:</strong> November 5, 2025
+          <strong>Last Updated:</strong> January 30, 2026
         </p>
 
         <div className="space-y-6 text-f1-gray">

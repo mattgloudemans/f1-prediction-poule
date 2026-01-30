@@ -37,7 +37,7 @@ const Header = ({ onMenuToggle }: HeaderProps) => {
 
           {/* Logo/Title */}
           <h1 className="text-2xl md:text-4xl font-bold text-gradient-red text-center flex-1 tracking-tight">
-            F1 PREDICTION POULE 2025
+            F1 PREDICTION POULE 2026
           </h1>
 
           {/* User Info */}

@@ -33,6 +33,15 @@ const HelmetIcon = () => (
   </svg>
 );
 
+const TeamIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </svg>
+);
+
 const TrophyIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
     <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
@@ -50,13 +59,6 @@ const ClipboardIcon = () => (
     <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
     <line x1="9" y1="12" x2="15" y2="12"/>
     <line x1="9" y1="16" x2="15" y2="16"/>
-  </svg>
-);
-
-const UserIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-    <circle cx="12" cy="7" r="4"/>
   </svg>
 );
 
@@ -103,20 +105,22 @@ const Navigation = ({ isOpen, onClose }: NavigationProps) => {
   const menuItems = [
     { path: '/', label: 'Homepage', icon: <RacingFlagIcon /> },
     { path: '/races', label: 'Race Overview', icon: <CheckeredFlagIcon /> },
-    { path: '/drivers', label: "Driver's Standings", icon: <HelmetIcon /> },
-    { path: '/leaderboard', label: "Players Championship", icon: <TrophyIcon /> },
-    { path: '/stats', label: 'Statistics', icon: <ChartIcon /> },
-    { path: '/rules', label: 'Rules', icon: <ClipboardIcon /> },
+    { path: '/drivers', label: 'Drivers', icon: <HelmetIcon /> },
+    { path: '/teams', label: 'Teams', icon: <TeamIcon /> },
+    { path: '/leaderboard', label: 'Championship', icon: <TrophyIcon /> },
   ];
 
-  // Add predictions and profile links if user is logged in
+  // Add predictions link if user is logged in
   if (user) {
     menuItems.push({ path: '/predictions', label: 'My Predictions', icon: <PredictionIcon /> });
-    menuItems.push({ path: '/profile', label: 'Profile', icon: <UserIcon /> });
   }
+
+  // Statistics always at the end of main menu
+  menuItems.push({ path: '/stats', label: 'Statistics', icon: <ChartIcon /> });
 
   // Footer menu items (always visible)
   const footerMenuItems = [
+    { path: '/rules', label: 'Rules', icon: <ClipboardIcon /> },
     { path: '/about', label: 'About', icon: <InfoIcon /> },
     { path: '/privacy', label: 'Privacy Policy', icon: <ShieldIcon /> },
   ];

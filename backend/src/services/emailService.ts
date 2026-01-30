@@ -32,7 +32,7 @@ export const sendMagicLink = async (email: string, token: string, nickname: stri
     subject: 'Welcome to F1 Prediction Poule - Login Link',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #E10600;">F1 Prediction Poule 2025</h2>
+        <h2 style="color: #E10600;">F1 Prediction Poule 2026</h2>
         <p>Hello ${escapeHtml(nickname)}!</p>
         <p>Click the button below to access your account:</p>
         <a href="${magicLink}"

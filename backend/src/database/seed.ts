@@ -8,15 +8,15 @@ const seedDatabase = async () => {
 
     // Seed races
     console.log('📅 Seeding races from Jolpi API...');
-    const jolpiRaces = await jolpiService.getRaces(2025);
+    const jolpiRaces = await jolpiService.getRaces(2026);
 
     for (const race of jolpiRaces) {
       const raceDate = new Date(`${race.date}T${race.time || '00:00:00'}`);
 
       await query(
-        `INSERT INTO races (season, round, race_name, circuit_name, country, race_date, race_time, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         ON CONFLICT (season, round) DO UPDATE SET
+        `INSERT INTO races (season, round, race_name, circuit_name, country, race_date, race_time, race_type, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         ON CONFLICT (season, round, race_type) DO UPDATE SET
            race_name = EXCLUDED.race_name,
            circuit_name = EXCLUDED.circuit_name,
            country = EXCLUDED.country,
@@ -30,6 +30,7 @@ const seedDatabase = async () => {
           race.Circuit.Location.country,
           raceDate,
           race.time,
+          'main',
           new Date() > raceDate ? 'completed' : 'upcoming'
         ]
       );
@@ -53,7 +54,7 @@ const seedDatabase = async () => {
     } catch {
       // Fallback to Jolpi
       console.log('⚠️  OpenF1 failed, using Jolpi API for drivers...');
-      const jolpiDrivers = await jolpiService.getDrivers(2025);
+      const jolpiDrivers = await jolpiService.getDrivers(2026);
       drivers = jolpiDrivers.map(d => ({
         number: parseInt(d.permanentNumber),
         name: `${d.givenName} ${d.familyName}`,
@@ -70,7 +71,7 @@ const seedDatabase = async () => {
            name = EXCLUDED.name,
            team = EXCLUDED.team,
            nationality = EXCLUDED.nationality`,
-        [driver.number, driver.name, driver.team, driver.nationality, 2025]
+        [driver.number, driver.name, driver.team, driver.nationality, 2026]
       );
     }
 

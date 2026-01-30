@@ -4,7 +4,7 @@ import * as jolpiService from '../services/jolpiService';
 async function syncDriverStandings() {
   try {
     console.log('[CRON] Starting driver standings sync...');
-    const season = 2025;
+    const season = 2026;
     const standings = await jolpiService.getDriverStandings(season);
     let updated = 0;
     let notFound = 0;

@@ -36,7 +36,7 @@ const RaceOverview = () => {
 
   const fetchRaces = async () => {
     try {
-      const response = await getRaces(2025);
+      const response = await getRaces(2026);
 
       // Sort races: upcoming first, then in_progress, then completed
       // Within each status group, maintain chronological order
@@ -104,7 +104,7 @@ const RaceOverview = () => {
 
   return (
     <div>
-      <h1 className="text-4xl font-bold mb-8 text-center">2025 Race Calendar</h1>
+      <h1 className="text-4xl font-bold mb-8 text-center">2026 Race Calendar</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {races.map((race) => (

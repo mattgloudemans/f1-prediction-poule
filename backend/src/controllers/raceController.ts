@@ -125,7 +125,7 @@ export const getQualifyingOrder = async (req: Request, res: Response) => {
 export const getRaces = async (req: Request, res: Response) => {
   try {
     const { season } = req.query;
-    const seasonYear = season ? parseInt(season as string) : 2025;
+    const seasonYear = season ? parseInt(season as string) : 2026;
 
     const result = await query(
       'SELECT * FROM races WHERE season = $1 ORDER BY round ASC',
@@ -228,19 +228,19 @@ export const getRaceResults = async (req: Request, res: Response) => {
   }
 };
 
-// F1 2025 sprint race rounds - update with official calendar
-const SPRINT_ROUNDS_2025 = [2, 4, 6, 9, 11, 23];
+// F1 2026 sprint race rounds: China, Miami, Canada, Great Britain, Netherlands, Singapore
+const SPRINT_ROUNDS_2026 = [2, 6, 7, 11, 14, 18];
 
 export const syncRaces = async (req: Request, res: Response) => {
   try {
     // Fetch races from Jolpi API
-    const jolpiRaces = await jolpiService.getRaces(2025);
+    const jolpiRaces = await jolpiService.getRaces(2026);
     let totalCount = 0;
 
     for (const race of jolpiRaces) {
       const raceDate = new Date(`${race.date}T${race.time || '00:00:00'}`);
       const roundNum = parseInt(race.round);
-      const hasSprint = SPRINT_ROUNDS_2025.includes(roundNum);
+      const hasSprint = SPRINT_ROUNDS_2026.includes(roundNum);
 
       // Insert main race
       await query(

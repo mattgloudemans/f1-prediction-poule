@@ -16,6 +16,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import About from './pages/About';
 import MyPredictions from './pages/MyPredictions';
 import Stats from './pages/Stats';
+import Teams from './pages/Teams';
 import { AuthContext } from './context/AuthContext';
 import { getProfile } from './services/api';
 
@@ -66,6 +67,7 @@ function App() {
               <Route path="/" element={<Homepage />} />
               <Route path="/races" element={<RaceOverview />} />
               <Route path="/drivers" element={<DriverStandings />} />
+              <Route path="/teams" element={<Teams />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/rules" element={<Rules />} />
               <Route path="/auth" element={<Auth />} />

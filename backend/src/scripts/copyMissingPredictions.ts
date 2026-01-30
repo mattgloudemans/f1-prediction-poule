@@ -7,7 +7,7 @@ import { query } from '../config/database';
 async function copyMissingPredictions() {
   try {
     console.log('[CRON] Starting missing predictions copy...');
-    const season = 2025;
+    const season = 2026;
 
     // Find races that just locked (1-10 minutes after lock time)
     // Lock time is 1 minute before race_date

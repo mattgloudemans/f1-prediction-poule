@@ -2,7 +2,19 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { TouchBackend } from 'react-dnd-touch-backend';
 import { getQualifyingOrder, submitPrediction, getPrediction } from '../services/api';
+import { haptics } from '../utils/haptics';
+import { getTeamColor } from '../utils/teamColors';
+
+// Detect touch device
+const isTouchDevice = () => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+const DndBackend = isTouchDevice() ? TouchBackend : HTML5Backend;
+const backendOptions = isTouchDevice() ? {
+  enableMouseEvents: true,
+  delayTouchStart: 100,  // Short delay for faster drag initiation (was 200ms default)
+  touchSlop: 5           // Pixels of movement allowed before drag starts
+} : {};
 
 interface Driver {
   id: number;
@@ -21,11 +33,12 @@ interface DragItem {
 
 const ItemType = 'DRIVER';
 
-// Racing number image component - compact for mobile
-const RacingNumberImage = ({ driverNumber, small = false }: { driverNumber: number; small?: boolean }) => {
+// Driver badge component with team color
+const DriverBadge = ({ driverNumber, team, small = false }: { driverNumber: number; team: string; small?: boolean }) => {
+  const teamColor = getTeamColor(team);
   return (
-    <div className={`flex items-center justify-center bg-white rounded text-black font-bold ${
-      small ? 'w-8 h-6 text-xs' : 'w-10 h-6 text-sm'
+    <div className={`flex items-center justify-center rounded-md font-bold border-l-4 ${teamColor.border} bg-white text-black ${
+      small ? 'w-10 h-8 text-sm' : 'w-12 h-10 text-base'
     }`}>
       {driverNumber}
     </div>
@@ -41,17 +54,22 @@ interface QualifyingDriverCardProps {
 const QualifyingDriverCard = ({ driver, isSelected }: QualifyingDriverCardProps) => {
   const [{ isDragging }, drag] = useDrag({
     type: ItemType,
-    item: { driver, source: 'qualifying' as const },
+    item: () => {
+      haptics.light();
+      return { driver, source: 'qualifying' as const };
+    },
     canDrag: !isSelected,
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
   });
 
+  const teamColor = getTeamColor(driver.team);
+
   return (
     <div
       ref={drag}
-      className={`flex items-center gap-2 p-1.5 rounded transition-all ${
+      className={`flex items-center gap-2 p-2 rounded-lg transition-all border-l-4 ${teamColor.border} ${
         isSelected
           ? 'bg-gray-700 opacity-40 cursor-not-allowed'
           : isDragging
@@ -59,7 +77,7 @@ const QualifyingDriverCard = ({ driver, isSelected }: QualifyingDriverCardProps)
           : 'bg-gray-800 hover:bg-gray-700 cursor-grab'
       }`}
     >
-      <RacingNumberImage driverNumber={driver.driver_number} small />
+      <DriverBadge driverNumber={driver.driver_number} team={driver.team} small />
       <span className="font-bold text-white text-sm">
         {driver.name_acronym || driver.name.substring(0, 3).toUpperCase()}
       </span>
@@ -80,6 +98,7 @@ const GridSlot = ({ position, driver, onDrop, onDragStart, isLeft }: GridSlotPro
   const [{ isDragging }, drag] = useDrag({
     type: ItemType,
     item: () => {
+      haptics.light();
       onDragStart(position);
       return { driver, source: 'grid' as const, sourceIndex: position - 1 };
     },
@@ -91,7 +110,10 @@ const GridSlot = ({ position, driver, onDrop, onDragStart, isLeft }: GridSlotPro
 
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: ItemType,
-    drop: (item: DragItem) => onDrop(item, position),
+    drop: (item: DragItem) => {
+      haptics.success();
+      onDrop(item, position);
+    },
     collect: (monitor) => ({
       isOver: monitor.isOver(),
       canDrop: monitor.canDrop(),
@@ -107,6 +129,8 @@ const GridSlot = ({ position, driver, onDrop, onDragStart, isLeft }: GridSlotPro
     [drag, drop]
   );
 
+  const teamColor = driver ? getTeamColor(driver.team) : null;
+
   return (
     <div
       className={`flex items-center gap-1 ${isLeft ? '' : 'flex-row-reverse'}`}
@@ -115,19 +139,19 @@ const GridSlot = ({ position, driver, onDrop, onDragStart, isLeft }: GridSlotPro
       <span className="text-f1-gray font-bold text-xs w-5 text-center">{position}</span>
       <div
         ref={ref}
-        className={`w-20 h-10 rounded border-2 transition-all flex items-center justify-center gap-1 ${
+        className={`w-24 h-12 rounded-lg border-2 transition-all flex items-center justify-center gap-1.5 ${
           isDragging
             ? 'opacity-50 border-f1-red'
             : isOver && canDrop
             ? 'border-f1-red bg-f1-red/20'
-            : driver
-            ? 'border-gray-600 bg-gray-800 cursor-grab'
+            : driver && teamColor
+            ? `${teamColor.border} bg-gray-800 cursor-grab`
             : 'border-dashed border-gray-600 bg-gray-900'
         }`}
       >
         {driver ? (
           <>
-            <RacingNumberImage driverNumber={driver.driver_number} small />
+            <DriverBadge driverNumber={driver.driver_number} team={driver.team} small />
             <span className="font-bold text-white text-xs">
               {driver.name_acronym || driver.name.substring(0, 3).toUpperCase()}
             </span>
@@ -297,7 +321,7 @@ const PredictionInterface = ({ raceId }: PredictionInterfaceProps) => {
   const filledCount = predictions.filter(d => d !== null).length;
 
   return (
-    <DndProvider backend={HTML5Backend}>
+    <DndProvider backend={DndBackend} options={backendOptions}>
       <div className="flex flex-col gap-4">
         {/* Two columns side by side */}
         <div className="grid grid-cols-2 gap-2">

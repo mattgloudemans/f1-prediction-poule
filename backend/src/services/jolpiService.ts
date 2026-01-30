@@ -1,9 +1,21 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
+import { f1Cache, CACHE_TTL } from '../utils/cache';
 
 dotenv.config();
 
 const JOLPI_API_URL = process.env.JOLPI_API_URL || 'https://api.jolpi.ca/ergast/f1';
+
+// Helper to create cache keys
+const cacheKey = {
+  races: (season: number) => `races:${season}`,
+  driverStandings: (season: number) => `standings:${season}`,
+  raceResults: (season: number, round: number) => `race:${season}:${round}`,
+  qualifying: (season: number, round: number) => `quali:${season}:${round}`,
+  sprint: (season: number, round: number) => `sprint:${season}:${round}`,
+  practice: (season: number, round: number, session: number) => `fp${session}:${season}:${round}`,
+  drivers: (season: number) => `drivers:${season}`,
+};
 
 export interface JolpiRace {
   season: string;
@@ -52,20 +64,32 @@ export interface JolpiResult {
   status: string;
 }
 
-export const getRaces = async (season: number = 2025): Promise<JolpiRace[]> => {
+export const getRaces = async (season: number = 2026): Promise<JolpiRace[]> => {
+  const key = cacheKey.races(season);
+  const cached = f1Cache.get<JolpiRace[]>(key);
+  if (cached) return cached;
+
   try {
     const response = await axios.get(`${JOLPI_API_URL}/${season}.json`);
-    return response.data.MRData.RaceTable.Races || [];
+    const races = response.data.MRData.RaceTable.Races || [];
+    f1Cache.set(key, races, CACHE_TTL.RACE_SCHEDULE);
+    return races;
   } catch (error) {
     console.error('Error fetching races from Jolpi:', error);
     throw error;
   }
 };
 
-export const getDriverStandings = async (season: number = 2025): Promise<JolpiStanding[]> => {
+export const getDriverStandings = async (season: number = 2026): Promise<JolpiStanding[]> => {
+  const key = cacheKey.driverStandings(season);
+  const cached = f1Cache.get<JolpiStanding[]>(key);
+  if (cached) return cached;
+
   try {
     const response = await axios.get(`${JOLPI_API_URL}/${season}/driverStandings.json`);
-    return response.data.MRData.StandingsTable.StandingsLists[0]?.DriverStandings || [];
+    const standings = response.data.MRData.StandingsTable.StandingsLists[0]?.DriverStandings || [];
+    f1Cache.set(key, standings, CACHE_TTL.DRIVER_STANDINGS);
+    return standings;
   } catch (error) {
     console.error('Error fetching driver standings from Jolpi:', error);
     throw error;
@@ -73,19 +97,32 @@ export const getDriverStandings = async (season: number = 2025): Promise<JolpiSt
 };
 
 export const getRaceResults = async (season: number, round: number): Promise<JolpiResult[]> => {
+  const key = cacheKey.raceResults(season, round);
+  const cached = f1Cache.get<JolpiResult[]>(key);
+  if (cached) return cached;
+
   try {
     const response = await axios.get(`${JOLPI_API_URL}/${season}/${round}/results.json`);
-    return response.data.MRData.RaceTable.Races[0]?.Results || [];
+    const results = response.data.MRData.RaceTable.Races[0]?.Results || [];
+    // Cache race results for 24 hours (completed race data rarely changes)
+    f1Cache.set(key, results, CACHE_TTL.COMPLETED_SESSION);
+    return results;
   } catch (error) {
     console.error('Error fetching race results from Jolpi:', error);
     throw error;
   }
 };
 
-export const getDrivers = async (season: number = 2025): Promise<JolpiDriver[]> => {
+export const getDrivers = async (season: number = 2026): Promise<JolpiDriver[]> => {
+  const key = cacheKey.drivers(season);
+  const cached = f1Cache.get<JolpiDriver[]>(key);
+  if (cached) return cached;
+
   try {
     const response = await axios.get(`${JOLPI_API_URL}/${season}/drivers.json`);
-    return response.data.MRData.DriverTable.Drivers || [];
+    const drivers = response.data.MRData.DriverTable.Drivers || [];
+    f1Cache.set(key, drivers, CACHE_TTL.RACE_SCHEDULE);
+    return drivers;
   } catch (error) {
     console.error('Error fetching drivers from Jolpi:', error);
     throw error;
@@ -106,9 +143,15 @@ export interface JolpiQualifyingResult {
 }
 
 export const getQualifyingResults = async (season: number, round: number): Promise<JolpiQualifyingResult[]> => {
+  const key = cacheKey.qualifying(season, round);
+  const cached = f1Cache.get<JolpiQualifyingResult[]>(key);
+  if (cached) return cached;
+
   try {
     const response = await axios.get(`${JOLPI_API_URL}/${season}/${round}/qualifying.json`);
-    return response.data.MRData.RaceTable.Races[0]?.QualifyingResults || [];
+    const results = response.data.MRData.RaceTable.Races[0]?.QualifyingResults || [];
+    f1Cache.set(key, results, CACHE_TTL.COMPLETED_SESSION);
+    return results;
   } catch (error) {
     console.error('Error fetching qualifying results from Jolpi:', error);
     throw error;
@@ -117,9 +160,15 @@ export const getQualifyingResults = async (season: number, round: number): Promi
 
 // Get sprint results for a specific round
 export const getSprintResults = async (season: number, round: number): Promise<JolpiResult[]> => {
+  const key = cacheKey.sprint(season, round);
+  const cached = f1Cache.get<JolpiResult[]>(key);
+  if (cached) return cached;
+
   try {
     const response = await axios.get(`${JOLPI_API_URL}/${season}/${round}/sprint.json`);
-    return response.data.MRData.RaceTable.Races[0]?.SprintResults || [];
+    const results = response.data.MRData.RaceTable.Races[0]?.SprintResults || [];
+    f1Cache.set(key, results, CACHE_TTL.COMPLETED_SESSION);
+    return results;
   } catch (error) {
     console.error('Error fetching sprint results from Jolpi:', error);
     return []; // Return empty array if no sprint for this round
@@ -137,8 +186,8 @@ export const hasSprint = async (season: number, round: number): Promise<boolean>
   }
 };
 
-// F1 2025 sprint race rounds (hardcoded for reliability)
-export const SPRINT_ROUNDS_2025 = [2, 4, 6, 9, 11, 23]; // Example rounds - update with actual 2025 calendar
+// F1 2026 sprint race rounds: China, Miami, Canada, Great Britain, Netherlands, Singapore
+export const SPRINT_ROUNDS_2026 = [2, 6, 7, 11, 14, 18];
 
 export interface JolpiPracticeResult {
   number: string;
@@ -156,6 +205,10 @@ export interface JolpiPracticeResult {
 
 // Get practice session results (FP1, FP2, FP3)
 export const getPracticeResults = async (season: number, round: number, session: 1 | 2 | 3): Promise<JolpiPracticeResult[]> => {
+  const key = cacheKey.practice(season, round, session);
+  const cached = f1Cache.get<JolpiPracticeResult[]>(key);
+  if (cached) return cached;
+
   try {
     const endpoint = session === 1 ? 'fp1' : session === 2 ? 'fp2' : 'fp3';
     const response = await axios.get(`${JOLPI_API_URL}/${season}/${round}/${endpoint}.json`);
@@ -163,7 +216,9 @@ export const getPracticeResults = async (season: number, round: number, session:
     if (races.length === 0) return [];
 
     const sessionKey = session === 1 ? 'FirstPractice' : session === 2 ? 'SecondPractice' : 'ThirdPractice';
-    return races[0][sessionKey + 'Results'] || races[0].PracticeResults || [];
+    const results = races[0][sessionKey + 'Results'] || races[0].PracticeResults || [];
+    f1Cache.set(key, results, CACHE_TTL.COMPLETED_SESSION);
+    return results;
   } catch (error) {
     console.error(`Error fetching FP${session} results from Jolpi:`, error);
     return [];

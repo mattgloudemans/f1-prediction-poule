@@ -236,7 +236,7 @@ const Rules = () => {
         <section className="bg-gray-800 rounded-lg p-6">
           <h2 className="text-2xl font-bold mb-4 text-f1-red"><CheckeredFlagIcon />Season Championship</h2>
           <p>
-            Your points accumulate throughout the entire 2025 season. The player with the most
+            Your points accumulate throughout the entire 2026 season. The player with the most
             points at the end of the season wins the Players Championship! Check the leaderboard
             regularly to see how you stack up against other players.
           </p>

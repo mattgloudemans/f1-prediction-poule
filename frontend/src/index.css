@@ -36,8 +36,8 @@ body {
   background: linear-gradient(180deg, #FF3333 0%, #E10600 100%);
 }
 
-/* Sliding banner animation */
-@keyframes slide {
+/* Marquee banner animation */
+@keyframes marquee {
   0% {
     transform: translateX(0);
   }
@@ -46,16 +46,18 @@ body {
   }
 }
 
-.animate-slide {
-  animation: slide 20s linear infinite;
-  display: inline-block;
+.marquee-container {
+  overflow: hidden;
+  width: 100%;
 }
 
-.animate-slide::after {
-  content: attr(data-text);
-  position: absolute;
-  white-space: nowrap;
-  left: 100%;
+.marquee-content {
+  display: inline-flex;
+  animation: marquee 30s linear infinite;
+}
+
+.marquee-content:hover {
+  animation-play-state: paused;
 }
 
 /* F1 Custom Utilities */

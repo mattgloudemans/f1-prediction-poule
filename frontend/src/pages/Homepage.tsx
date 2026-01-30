@@ -14,6 +14,7 @@ interface Race {
   race_date: string;
   round: number;
   race_type: 'sprint' | 'main';
+  status: 'upcoming' | 'provisional' | 'completed';
 }
 
 const Homepage = () => {
@@ -33,12 +34,14 @@ const Homepage = () => {
       const races = response.data;
       setUpcomingRaces(races);
 
-      // Default to sprint tab if sprint is first upcoming race
-      if (races.length > 0) {
-        const firstRace = races[0];
-        if (firstRace.race_type === 'sprint') {
-          setActiveTab('sprint');
-        }
+      // Find sprint race for this round
+      const sprint = races.find((r: Race) => r.race_type === 'sprint');
+
+      // Default to sprint tab only if sprint exists and is still upcoming
+      if (sprint && sprint.status === 'upcoming') {
+        setActiveTab('sprint');
+      } else {
+        setActiveTab('main');
       }
     } catch (error) {
       console.error('Failed to fetch upcoming races:', error);
@@ -50,7 +53,8 @@ const Homepage = () => {
   const sprintRace = upcomingRaces.find(r => r.race_type === 'sprint');
   const mainRace = upcomingRaces.find(r => r.race_type === 'main');
   const nextRace = upcomingRaces[0] || null;
-  const hasSprint = !!sprintRace;
+  // Only show sprint tab if sprint exists and is still upcoming (not finished)
+  const hasSprint = sprintRace && sprintRace.status === 'upcoming';
 
   if (loading) {
     return (

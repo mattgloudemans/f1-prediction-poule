@@ -5,7 +5,7 @@ import { calculateRacePoints } from '../controllers/leaderboardController';
 async function syncRaceResults() {
   try {
     console.log('[CRON] Starting race results sync...');
-    const season = 2025;
+    const season = 2026;
 
     // Find races that have passed but don't have results yet or are marked as upcoming
     const racesResult = await query(

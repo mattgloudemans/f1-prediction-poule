@@ -68,8 +68,8 @@ const Stats = () => {
   const fetchData = async () => {
     try {
       const [racesRes, statsRes] = await Promise.all([
-        getCompletedRaces(2025),
-        getSeasonStats(2025)
+        getCompletedRaces(2026),
+        getSeasonStats(2026)
       ]);
       setRaces(racesRes.data);
       setSeasonStats(statsRes.data);
@@ -100,23 +100,23 @@ const Stats = () => {
       let response;
       switch (selectedSession) {
         case 'fp1':
-          response = await getPracticeResults(selectedRound, 1, 2025);
+          response = await getPracticeResults(selectedRound, 1, 2026);
           break;
         case 'fp2':
-          response = await getPracticeResults(selectedRound, 2, 2025);
+          response = await getPracticeResults(selectedRound, 2, 2026);
           break;
         case 'fp3':
-          response = await getPracticeResults(selectedRound, 3, 2025);
+          response = await getPracticeResults(selectedRound, 3, 2026);
           break;
         case 'qualifying':
-          response = await getQualifyingResultsStats(selectedRound, 2025);
+          response = await getQualifyingResultsStats(selectedRound, 2026);
           break;
         case 'sprint':
-          response = await getSprintResultsStats(selectedRound, 2025);
+          response = await getSprintResultsStats(selectedRound, 2026);
           break;
         case 'race':
         default:
-          response = await getRaceResultsStats(selectedRound, 2025);
+          response = await getRaceResultsStats(selectedRound, 2026);
           break;
       }
       setSessionResults(response.data);
@@ -157,7 +157,7 @@ const Stats = () => {
   return (
     <div className="max-w-6xl mx-auto">
       <h1 className="text-4xl font-bold mb-6 text-center text-gradient-red">
-        2025 Season Statistics
+        2026 Season Statistics
       </h1>
 
       {/* Season Summary */}

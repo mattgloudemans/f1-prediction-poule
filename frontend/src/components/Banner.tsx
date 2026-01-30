@@ -45,22 +45,25 @@ const Banner = ({ nextRaceDate, nextRaceName, isSprint }: BannerProps) => {
     });
   };
 
+  const bannerText = nextRaceName && nextRaceDate
+    ? `${isSprint ? '🏃' : '🏁'} NEXT ${isSprint ? 'SPRINT' : 'RACE'}: ${nextRaceName} • COUNTDOWN: ${timeLeft} • ${isSprint ? 'SPRINT' : 'RACE'} TIME (EST): ${formatRaceTime(new Date(nextRaceDate))} ${isSprint ? '🏃' : '🏁'}`
+    : 'Loading next race information...';
+
   return (
     <div className={`overflow-hidden ${
       isSprint
         ? 'bg-gradient-to-r from-orange-600 to-orange-500'
         : 'bg-gradient-to-r from-f1-red to-red-700'
     }`}>
-      <div className="animate-slide whitespace-nowrap py-3">
-        <span className="inline-block px-8 text-white font-bold">
-          {nextRaceName && nextRaceDate && (
-            <>
-              {isSprint ? '🏃' : '🏁'} NEXT {isSprint ? 'SPRINT' : 'RACE'}: {nextRaceName} • COUNTDOWN: {timeLeft} •
-              {isSprint ? 'SPRINT' : 'RACE'} TIME (EST): {formatRaceTime(new Date(nextRaceDate))} {isSprint ? '🏃' : '🏁'}
-            </>
-          )}
-          {!nextRaceName && 'Loading next race information...'}
-        </span>
+      <div className="marquee-container py-3">
+        <div className="marquee-content">
+          <span className="inline-block px-8 text-white font-bold whitespace-nowrap">
+            {bannerText}
+          </span>
+          <span className="inline-block px-8 text-white font-bold whitespace-nowrap">
+            {bannerText}
+          </span>
+        </div>
       </div>
     </div>
   );

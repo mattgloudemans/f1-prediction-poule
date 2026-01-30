@@ -18,7 +18,7 @@ const sprintPointsMap: { [key: number]: number } = {
 async function processProvisionalResults() {
   try {
     console.log('[CRON] Starting provisional results processing...');
-    const season = 2025;
+    const season = 2026;
 
     // Find races that finished ~5 minutes ago (between 3-10 min window to catch it)
     // and haven't had provisional results sent yet

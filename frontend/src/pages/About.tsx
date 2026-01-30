@@ -37,7 +37,7 @@ const About = () => {
                 Formula 1 driver championship standings
               </li>
               <li>
-                <strong className="text-white">View Race Calendar:</strong> Access the complete 2025 F1 race
+                <strong className="text-white">View Race Calendar:</strong> Access the complete 2026 F1 race
                 schedule with results and upcoming events
               </li>
             </ul>
@@ -181,8 +181,8 @@ const About = () => {
           <section>
             <h2 className="text-2xl font-bold text-white mb-3">Version & Updates</h2>
             <p>
-              <strong>Current Version:</strong> 1.0 (2025 Season)<br />
-              <strong>Last Updated:</strong> November 5, 2025
+              <strong>Current Version:</strong> 2.0 (2026 Season)<br />
+              <strong>Last Updated:</strong> January 30, 2026
             </p>
             <p className="mt-3">
               We continuously improve F1 Prediction Poule based on user feedback and the latest Formula 1

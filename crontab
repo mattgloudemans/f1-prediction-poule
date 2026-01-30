@@ -1,6 +1,12 @@
+# YEARLY POINTS RESET: Reset all user points on January 1st at midnight UTC
+0 0 1 1 * /app/reset-yearly-points.sh
+
 # Sync driver standings twice weekly: Monday and Thursday at 9:00 AM UTC
 # This covers both regular race weekends (Sunday) and sprint weekends (Saturday)
 0 9 * * 1,4 /app/sync-driver-standings.sh
+
+# Sync race results every Monday at 3:00 AM UTC
+0 3 * * 1 /app/sync-race-results.sh
 
 # COPY MISSING PREDICTIONS: Check every 2 minutes on race days (Sun 12:00-18:00 UTC)
 # Copies last prediction for users who forgot to submit

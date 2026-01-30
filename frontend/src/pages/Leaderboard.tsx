@@ -41,7 +41,7 @@ const Leaderboard = () => {
 
   return (
     <div>
-      <h1 className="text-4xl md:text-display-xl font-bold mb-8 text-center text-gradient-red">Niffo's Championship</h1>
+      <h1 className="text-4xl md:text-display-xl font-bold mb-8 text-center text-gradient-red">Championship</h1>
 
       {/* Podium Display */}
       {topThree.length >= 3 && (

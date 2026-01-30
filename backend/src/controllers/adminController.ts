@@ -14,6 +14,9 @@ const cronJobStatus: {
 } = {
   syncDriverStandings: { lastRun: null, lastStatus: null, lastMessage: null, isRunning: false },
   syncRaceResults: { lastRun: null, lastStatus: null, lastMessage: null, isRunning: false },
+  copyMissingPredictions: { lastRun: null, lastStatus: null, lastMessage: null, isRunning: false },
+  sendProvisionalResults: { lastRun: null, lastStatus: null, lastMessage: null, isRunning: false },
+  processFinalResults: { lastRun: null, lastStatus: null, lastMessage: null, isRunning: false },
 };
 
 export const getAllUsers = async (req: Request, res: Response) => {
@@ -66,19 +69,48 @@ export const getCronJobs = async (req: Request, res: Response) => {
   try {
     // Get last sync times from database
     const driverLastUpdate = await query(
-      'SELECT MAX(updated_at) as last_updated FROM drivers WHERE season = 2025'
+      'SELECT MAX(updated_at) as last_updated FROM drivers WHERE season = 2026'
     );
     const raceLastUpdate = await query(
-      'SELECT MAX(updated_at) as last_updated FROM races WHERE season = 2025'
+      'SELECT MAX(updated_at) as last_updated FROM races WHERE season = 2026'
     );
 
     // Get count of completed races and pending races
     const raceStats = await query(
       `SELECT
         COUNT(*) FILTER (WHERE status = 'completed') as completed_races,
+        COUNT(*) FILTER (WHERE status = 'provisional') as provisional_races,
         COUNT(*) FILTER (WHERE status = 'upcoming' AND race_date < NOW()) as pending_races,
         COUNT(*) FILTER (WHERE status = 'upcoming' AND race_date > NOW()) as upcoming_races
-       FROM races WHERE season = 2025`
+       FROM races WHERE season = 2026`
+    );
+
+    // Get races needing provisional results (finished 5min-3hrs ago, not sent yet)
+    const provisionalPending = await query(
+      `SELECT COUNT(*) as count FROM races
+       WHERE season = 2026
+         AND race_date < NOW() - INTERVAL '5 minutes'
+         AND race_date > NOW() - INTERVAL '3 hours'
+         AND provisional_results_sent = FALSE
+         AND status = 'upcoming'`
+    );
+
+    // Get races needing final results (24+ hours old, provisional status)
+    const finalPending = await query(
+      `SELECT COUNT(*) as count FROM races
+       WHERE season = 2026
+         AND race_date < NOW() - INTERVAL '24 hours'
+         AND final_results_processed = FALSE
+         AND status = 'provisional'`
+    );
+
+    // Get races that just locked (for copy missing predictions)
+    const copyPredictionsPending = await query(
+      `SELECT COUNT(*) as count FROM races
+       WHERE season = 2026
+         AND race_date - INTERVAL '1 minute' < NOW()
+         AND race_date - INTERVAL '1 minute' > NOW() - INTERVAL '10 minutes'
+         AND status = 'upcoming'`
     );
 
     const cronJobs = [
@@ -89,6 +121,7 @@ export const getCronJobs = async (req: Request, res: Response) => {
         schedule: '0 9 * * 1,4',
         scheduleHuman: 'Monday & Thursday at 09:00 UTC',
         lastDataUpdate: driverLastUpdate.rows[0]?.last_updated || null,
+        canTrigger: true,
         ...cronJobStatus.syncDriverStandings
       },
       {
@@ -99,7 +132,41 @@ export const getCronJobs = async (req: Request, res: Response) => {
         scheduleHuman: 'Monday & Thursday at 09:15 UTC',
         lastDataUpdate: raceLastUpdate.rows[0]?.last_updated || null,
         pendingRaces: parseInt(raceStats.rows[0]?.pending_races || '0'),
+        canTrigger: true,
         ...cronJobStatus.syncRaceResults
+      },
+      {
+        id: 'copyMissingPredictions',
+        name: 'Copy Missing Predictions',
+        description: 'Copies last prediction for users who forgot to submit before race lock',
+        schedule: '*/2 12-18 * * 0',
+        scheduleHuman: 'Sundays 12:00-18:00 UTC (every 2 min)',
+        lastDataUpdate: null,
+        pendingRaces: parseInt(copyPredictionsPending.rows[0]?.count || '0'),
+        canTrigger: false,
+        ...cronJobStatus.copyMissingPredictions
+      },
+      {
+        id: 'sendProvisionalResults',
+        name: 'Send Provisional Results',
+        description: 'Sends provisional results email ~5 minutes after race ends',
+        schedule: '*/5 12-20 * * 0',
+        scheduleHuman: 'Sundays 12:00-20:00 UTC (every 5 min)',
+        lastDataUpdate: null,
+        pendingRaces: parseInt(provisionalPending.rows[0]?.count || '0'),
+        canTrigger: false,
+        ...cronJobStatus.sendProvisionalResults
+      },
+      {
+        id: 'processFinalResults',
+        name: 'Process Final Results',
+        description: 'Recalculates points 24h after race (accounts for DQs/penalties), sends final email',
+        schedule: '0 12-20 * * 1',
+        scheduleHuman: 'Mondays 12:00-20:00 UTC (hourly)',
+        lastDataUpdate: null,
+        pendingRaces: parseInt(finalPending.rows[0]?.count || '0'),
+        canTrigger: false,
+        ...cronJobStatus.processFinalResults
       }
     ];
 
@@ -107,6 +174,7 @@ export const getCronJobs = async (req: Request, res: Response) => {
       cronJobs,
       stats: {
         completedRaces: parseInt(raceStats.rows[0]?.completed_races || '0'),
+        provisionalRaces: parseInt(raceStats.rows[0]?.provisional_races || '0'),
         pendingRaces: parseInt(raceStats.rows[0]?.pending_races || '0'),
         upcomingRaces: parseInt(raceStats.rows[0]?.upcoming_races || '0')
       }
@@ -130,7 +198,7 @@ export const triggerDriverStandingsSync = async (req: Request, res: Response) =>
   res.json({ message: 'Driver standings sync started', status: 'running' });
 
   try {
-    const season = 2025;
+    const season = 2026;
     const standings = await jolpiService.getDriverStandings(season);
 
     // Fetch all existing drivers for this season
@@ -207,17 +275,19 @@ export const triggerRaceResultsSync = async (req: Request, res: Response) => {
   res.json({ message: 'Race results sync started', status: 'running' });
 
   try {
-    const season = 2025;
+    const season = 2026;
 
-    // Find races that have passed but don't have results yet
+    // Find ALL races that have passed but don't have results yet (both main and sprint)
     const racesResult = await query(
-      `SELECT r.id, r.season, r.round, r.race_name, r.race_date
+      `SELECT r.id, r.season, r.round, r.race_name, r.race_date, r.race_type
        FROM races r
        WHERE r.season = $1
          AND r.race_date < NOW()
-         AND (r.status = 'upcoming' OR NOT EXISTS (
-           SELECT 1 FROM race_results WHERE race_id = r.id
-         ))
+         AND (
+           (r.race_type = 'main' AND NOT EXISTS (SELECT 1 FROM race_results WHERE race_id = r.id))
+           OR
+           (r.race_type = 'sprint' AND NOT EXISTS (SELECT 1 FROM sprint_results WHERE race_id = r.id))
+         )
        ORDER BY r.race_date DESC`,
       [season]
     );
@@ -237,12 +307,21 @@ export const triggerRaceResultsSync = async (req: Request, res: Response) => {
 
     for (const race of races) {
       try {
-        const jolpiResults = await jolpiService.getRaceResults(race.season, race.round);
+        const isSprint = race.race_type === 'sprint';
 
-        if (jolpiResults.length === 0) continue;
+        // Fetch appropriate results from Jolpi API
+        const jolpiResults = isSprint
+          ? await jolpiService.getSprintResults(race.season, race.round)
+          : await jolpiService.getRaceResults(race.season, race.round);
+
+        if (jolpiResults.length === 0) {
+          console.log(`[ADMIN] No results found for ${race.race_name}`);
+          continue;
+        }
 
         // Clear existing results
-        await query('DELETE FROM race_results WHERE race_id = $1', [race.id]);
+        const resultsTable = isSprint ? 'sprint_results' : 'race_results';
+        await query(`DELETE FROM ${resultsTable} WHERE race_id = $1`, [race.id]);
 
         // Batch fetch drivers
         const driverNumbers = jolpiResults.map((r: any) => parseInt(r.number));
@@ -261,14 +340,14 @@ export const triggerRaceResultsSync = async (req: Request, res: Response) => {
           const driverId = driverMap.get(parseInt(result.number));
           if (driverId) {
             insertValues.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4})`);
-            insertParams.push(race.id, driverId, parseInt(result.position), parseFloat(result.points), result.status);
+            insertParams.push(race.id, driverId, parseInt(result.position), parseFloat(result.points || '0'), result.status);
             paramIndex += 5;
           }
         }
 
         if (insertValues.length > 0) {
           await query(
-            `INSERT INTO race_results (race_id, driver_id, position, points, status)
+            `INSERT INTO ${resultsTable} (race_id, driver_id, position, points, status)
              VALUES ${insertValues.join(', ')}`,
             insertParams
           );
@@ -278,9 +357,15 @@ export const triggerRaceResultsSync = async (req: Request, res: Response) => {
         // Update race status
         await query('UPDATE races SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', ['completed', race.id]);
 
-        // Calculate points
-        await calculateRacePoints(race.id);
+        // Calculate points for predictions
+        if (isSprint) {
+          await calculateSprintPoints(race.id);
+        } else {
+          await calculateRacePoints(race.id);
+        }
         racesProcessed++;
+
+        console.log(`[ADMIN] Synced ${race.race_name}: ${insertValues.length} results`);
 
       } catch (error) {
         console.error(`[ADMIN] Error syncing race ${race.race_name}:`, error);
@@ -302,3 +387,61 @@ export const triggerRaceResultsSync = async (req: Request, res: Response) => {
     console.error('[ADMIN] Race results sync error:', error);
   }
 };
+
+// Calculate sprint prediction points
+async function calculateSprintPoints(raceId: number) {
+  // Sprint points: 8-7-6-5-4-3-2-1 for positions 1-8
+  const SPRINT_POINTS = [8, 7, 6, 5, 4, 3, 2, 1];
+
+  // Get sprint results
+  const resultsQuery = await query(
+    'SELECT driver_id, position FROM sprint_results WHERE race_id = $1 ORDER BY position',
+    [raceId]
+  );
+  const results = resultsQuery.rows;
+
+  if (results.length === 0) return;
+
+  // Build a map of driver_id -> position
+  const resultMap = new Map(results.map((r: any) => [r.driver_id, r.position]));
+
+  // Get all predictions for this race
+  const predictionsQuery = await query(
+    `SELECT id, user_id, position_1, position_2, position_3, position_4,
+            position_5, position_6, position_7, position_8
+     FROM sprint_predictions WHERE race_id = $1`,
+    [raceId]
+  );
+
+  for (const prediction of predictionsQuery.rows) {
+    let totalPoints = 0;
+
+    for (let i = 1; i <= 8; i++) {
+      const predictedDriverId = prediction[`position_${i}`];
+      if (!predictedDriverId) continue;
+
+      const actualPosition = resultMap.get(predictedDriverId);
+      if (actualPosition === i) {
+        // Exact match - full points + 50% bonus
+        totalPoints += Math.floor(SPRINT_POINTS[i - 1] * 1.5);
+      } else if (actualPosition && Math.abs(actualPosition - i) === 1) {
+        // Off by 1 - full points
+        totalPoints += SPRINT_POINTS[i - 1];
+      }
+    }
+
+    // Update prediction points
+    await query(
+      'UPDATE sprint_predictions SET points_earned = $1 WHERE id = $2',
+      [totalPoints, prediction.id]
+    );
+
+    // Update user total points
+    await query(
+      'UPDATE users SET total_points = total_points + $1 WHERE id = $2',
+      [totalPoints, prediction.user_id]
+    );
+  }
+
+  console.log(`[ADMIN] Calculated sprint points for race ${raceId}`);
+}

@@ -6,7 +6,7 @@ import { query } from '../config/database';
 export const getPracticeResults = async (req: Request, res: Response) => {
   try {
     const { round, session } = req.params;
-    const season = parseInt(req.query.season as string) || 2025;
+    const season = parseInt(req.query.season as string) || 2026;
     const sessionNum = parseInt(session) as 1 | 2 | 3;
 
     if (![1, 2, 3].includes(sessionNum)) {
@@ -36,7 +36,7 @@ export const getPracticeResults = async (req: Request, res: Response) => {
 export const getQualifyingResults = async (req: Request, res: Response) => {
   try {
     const { round } = req.params;
-    const season = parseInt(req.query.season as string) || 2025;
+    const season = parseInt(req.query.season as string) || 2026;
 
     const results = await jolpiService.getQualifyingResults(season, parseInt(round));
 
@@ -62,7 +62,7 @@ export const getQualifyingResults = async (req: Request, res: Response) => {
 export const getRaceResultsFromApi = async (req: Request, res: Response) => {
   try {
     const { round } = req.params;
-    const season = parseInt(req.query.season as string) || 2025;
+    const season = parseInt(req.query.season as string) || 2026;
 
     const results = await jolpiService.getRaceResults(season, parseInt(round));
 
@@ -90,7 +90,7 @@ export const getRaceResultsFromApi = async (req: Request, res: Response) => {
 export const getSprintResultsFromApi = async (req: Request, res: Response) => {
   try {
     const { round } = req.params;
-    const season = parseInt(req.query.season as string) || 2025;
+    const season = parseInt(req.query.season as string) || 2026;
 
     const results = await jolpiService.getSprintResults(season, parseInt(round));
 
@@ -115,7 +115,7 @@ export const getSprintResultsFromApi = async (req: Request, res: Response) => {
 // Get all completed races with basic info
 export const getCompletedRaces = async (req: Request, res: Response) => {
   try {
-    const season = parseInt(req.query.season as string) || 2025;
+    const season = parseInt(req.query.season as string) || 2026;
 
     const result = await query(
       `SELECT id, round, race_name, circuit_name, country, race_date, race_type, status
@@ -135,7 +135,7 @@ export const getCompletedRaces = async (req: Request, res: Response) => {
 // Get season statistics summary
 export const getSeasonStats = async (req: Request, res: Response) => {
   try {
-    const season = parseInt(req.query.season as string) || 2025;
+    const season = parseInt(req.query.season as string) || 2026;
 
     // Get race counts
     const racesResult = await query(

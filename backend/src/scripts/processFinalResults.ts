@@ -6,7 +6,7 @@ import { sendFinalResults } from '../services/emailService';
 async function processFinalResults() {
   try {
     console.log('[CRON] Starting final results processing...');
-    const season = 2025;
+    const season = 2026;
 
     // Find races that are 24+ hours old and haven't had final results processed
     const racesResult = await query(
