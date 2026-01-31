@@ -77,12 +77,14 @@ async function copyMissingPredictions() {
         const pred = lastPrediction.rows[0];
 
         // Copy the prediction to the new race (different columns for sprint vs main)
+        // Use ON CONFLICT DO NOTHING to make this idempotent (safe to run multiple times)
         if (isSprint) {
-          await query(
+          const result = await query(
             `INSERT INTO sprint_predictions
               (user_id, race_id, position_1, position_2, position_3, position_4,
                position_5, position_6, position_7, position_8, is_locked)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE)`,
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE)
+             ON CONFLICT (user_id, race_id) DO NOTHING`,
             [
               user.id,
               race.id,
@@ -96,12 +98,14 @@ async function copyMissingPredictions() {
               pred.position_8
             ]
           );
+          if (result.rowCount === 0) continue; // Already exists, skip counting
         } else {
-          await query(
+          const result = await query(
             `INSERT INTO predictions
               (user_id, race_id, position_1, position_2, position_3, position_4, position_5,
                position_6, position_7, position_8, position_9, position_10, is_locked)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, TRUE)`,
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, TRUE)
+             ON CONFLICT (user_id, race_id) DO NOTHING`,
             [
               user.id,
               race.id,
@@ -117,6 +121,7 @@ async function copyMissingPredictions() {
               pred.position_10
             ]
           );
+          if (result.rowCount === 0) continue; // Already exists, skip counting
         }
 
         copiedCount++;

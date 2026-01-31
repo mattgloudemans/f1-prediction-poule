@@ -63,7 +63,8 @@ async function processProvisionalResults() {
         }
 
         // Clear existing results and insert new ones
-        await query('DELETE FROM race_results WHERE race_id = $1', [race.id]);
+        const resultsTable = isSprint ? 'sprint_results' : 'race_results';
+        await query(`DELETE FROM ${resultsTable} WHERE race_id = $1`, [race.id]);
 
         // Build driver lookup map
         const driverNumbers = jolpiResults.map((r: any) => parseInt(r.number));
@@ -81,7 +82,7 @@ async function processProvisionalResults() {
 
           if (driver) {
             await query(
-              `INSERT INTO race_results (race_id, driver_id, position, points, status)
+              `INSERT INTO ${resultsTable} (race_id, driver_id, position, points, status)
                VALUES ($1, $2, $3, $4, $5)`,
               [race.id, driver.id, parseInt(result.position), parseFloat(result.points), result.status]
             );
@@ -130,7 +131,7 @@ async function processProvisionalResults() {
 
               // Find actual position
               const actualResult = await query(
-                'SELECT position FROM race_results WHERE race_id = $1 AND driver_id = $2',
+                `SELECT position FROM ${resultsTable} WHERE race_id = $1 AND driver_id = $2`,
                 [race.id, predictedDriverId]
               );
 

@@ -71,7 +71,8 @@ async function processFinalResults() {
         const driverMap = new Map(driversResult.rows.map((d: any) => [d.driver_number, d.id]));
 
         // Clear existing results
-        await query('DELETE FROM race_results WHERE race_id = $1', [race.id]);
+        const resultsTable = isSprint ? 'sprint_results' : 'race_results';
+        await query(`DELETE FROM ${resultsTable} WHERE race_id = $1`, [race.id]);
 
         // Insert fresh results (with any DQs applied)
         for (const result of jolpiResults) {
@@ -80,35 +81,40 @@ async function processFinalResults() {
 
           if (driverId) {
             await query(
-              `INSERT INTO race_results (race_id, driver_id, position, points, status)
+              `INSERT INTO ${resultsTable} (race_id, driver_id, position, points, status)
                VALUES ($1, $2, $3, $4, $5)`,
               [race.id, driverId, parseInt(result.position), parseFloat(result.points), result.status]
             );
           }
         }
 
-        // Reset user total points contribution from this race
-        // We need to subtract old points before adding new
+        // Get old prediction points for comparison
         const oldPredictions = await query(
           `SELECT user_id, points_earned FROM ${predictionTable} WHERE race_id = $1`,
           [race.id]
         );
+        const oldPointsMap = new Map(oldPredictions.rows.map((p: any) => [p.user_id, p.points_earned]));
 
-        for (const pred of oldPredictions.rows) {
-          await query(
-            'UPDATE users SET total_points = total_points - $1 WHERE id = $2',
-            [pred.points_earned, pred.user_id]
-          );
-        }
-
-        // Reset prediction points
+        // Reset prediction points to 0 first
         await query(
-          `UPDATE ${predictionTable} SET points_earned = 0, is_locked = FALSE WHERE race_id = $1`,
+          `UPDATE ${predictionTable} SET points_earned = 0 WHERE race_id = $1`,
           [race.id]
         );
 
         // Recalculate all points with final results
+        // Note: calculateRacePoints adds new points to user totals
         await calculateRacePoints(race.id);
+
+        // Now adjust user totals: subtract old points that were already counted
+        // This avoids double-counting since calculateRacePoints already added new points
+        for (const [userId, oldPoints] of oldPointsMap) {
+          if (oldPoints > 0) {
+            await query(
+              'UPDATE users SET total_points = total_points - $1 WHERE id = $2',
+              [oldPoints, userId]
+            );
+          }
+        }
 
         // Update race status to completed
         await query(

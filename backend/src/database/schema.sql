@@ -92,6 +92,19 @@ CREATE TABLE IF NOT EXISTS race_results (
   UNIQUE(race_id, driver_id)
 );
 
+-- Sprint results table (for sprint race results)
+CREATE TABLE IF NOT EXISTS sprint_results (
+  id SERIAL PRIMARY KEY,
+  race_id INTEGER NOT NULL REFERENCES races(id) ON DELETE CASCADE,
+  driver_id INTEGER NOT NULL REFERENCES drivers(id) ON DELETE CASCADE,
+  position INTEGER NOT NULL,
+  points INTEGER NOT NULL,
+  status VARCHAR(50), -- finished, dnf, dns, disqualified
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(race_id, position),
+  UNIQUE(race_id, driver_id)
+);
+
 -- Sprint predictions table (8 positions for sprint races)
 CREATE TABLE IF NOT EXISTS sprint_predictions (
   id SERIAL PRIMARY KEY,
@@ -132,6 +145,7 @@ CREATE INDEX IF NOT EXISTS idx_predictions_user ON predictions(user_id);
 CREATE INDEX IF NOT EXISTS idx_predictions_race ON predictions(race_id);
 CREATE INDEX IF NOT EXISTS idx_predictions_user_race ON predictions(user_id, race_id);
 CREATE INDEX IF NOT EXISTS idx_race_results_race ON race_results(race_id);
+CREATE INDEX IF NOT EXISTS idx_sprint_results_race ON sprint_results(race_id);
 CREATE INDEX IF NOT EXISTS idx_magic_links_token ON magic_links(token);
 CREATE INDEX IF NOT EXISTS idx_magic_links_user ON magic_links(user_id);
 CREATE INDEX IF NOT EXISTS idx_qualifying_results_race ON qualifying_results(race_id);
@@ -149,18 +163,23 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Triggers for updated_at
+-- Triggers for updated_at (drop first to make idempotent)
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_drivers_updated_at ON drivers;
 CREATE TRIGGER update_drivers_updated_at BEFORE UPDATE ON drivers
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_races_updated_at ON races;
 CREATE TRIGGER update_races_updated_at BEFORE UPDATE ON races
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_predictions_updated_at ON predictions;
 CREATE TRIGGER update_predictions_updated_at BEFORE UPDATE ON predictions
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_sprint_predictions_updated_at ON sprint_predictions;
 CREATE TRIGGER update_sprint_predictions_updated_at BEFORE UPDATE ON sprint_predictions
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
