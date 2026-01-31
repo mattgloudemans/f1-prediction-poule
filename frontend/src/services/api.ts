@@ -20,7 +20,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Auth
+// Auth - Magic Link
 export const register = (nickname: string, email: string) =>
   api.post('/api/auth/register', { nickname, email });
 
@@ -29,6 +29,16 @@ export const login = (email: string) =>
 
 export const verifyToken = (token: string) =>
   api.get(`/api/auth/verify?token=${token}`);
+
+// Auth - Password
+export const registerWithPassword = (nickname: string, email: string, password: string) =>
+  api.post('/api/auth/register-password', { nickname, email, password });
+
+export const loginWithPassword = (email: string, password: string) =>
+  api.post('/api/auth/login-password', { email, password });
+
+export const setPassword = (password: string) =>
+  api.post('/api/auth/set-password', { password });
 
 export const getProfile = () =>
   api.get('/api/auth/profile');
@@ -130,5 +140,24 @@ export const getRaceResultsStats = (round: number, season?: number) =>
 
 export const getSprintResultsStats = (round: number, season?: number) =>
   api.get(`/api/stats/sprint/${round}`, { params: { season } });
+
+// Admin
+export const getAdminUsers = () =>
+  api.get('/api/admin/users');
+
+export const deleteAdminUser = (id: number) =>
+  api.delete(`/api/admin/users/${id}`);
+
+export const getAdminCronJobs = () =>
+  api.get('/api/admin/cronjobs');
+
+export const triggerDriverStandingsSync = () =>
+  api.post('/api/admin/cronjobs/sync-driver-standings');
+
+export const triggerRaceResultsSync = () =>
+  api.post('/api/admin/cronjobs/sync-race-results');
+
+export const sendBroadcastEmail = (subject: string, message: string) =>
+  api.post('/api/admin/broadcast', { subject, message });
 
 export default api;

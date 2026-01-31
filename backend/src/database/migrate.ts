@@ -16,6 +16,14 @@ const runMigration = async () => {
 
     await query(schema);
 
+    // Add password_hash column if it doesn't exist
+    console.log('Checking for password_hash column...');
+    await query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)
+    `);
+    console.log('password_hash column ensured.');
+
     console.log('Database migrations completed successfully!');
     process.exit(0);
   } catch (error) {

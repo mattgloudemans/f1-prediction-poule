@@ -21,6 +21,18 @@ const Admin = () => {
   const [syncStatus, setSyncStatus] = useState<{ [key: string]: 'idle' | 'loading' | 'success' | 'error' }>({});
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
+  // Broadcast email state
+  const [broadcastSubject, setBroadcastSubject] = useState('');
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [broadcastStatus, setBroadcastStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [broadcastResult, setBroadcastResult] = useState<string | null>(null);
+
+  // Set password state
+  const [passwordModal, setPasswordModal] = useState<{ userId: number; nickname: string } | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordStatus, setPasswordStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -95,6 +107,85 @@ const Admin = () => {
     setUsername('');
     setPassword('');
     setUsers([]);
+  };
+
+  const handleSetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!credentials || !passwordModal) return;
+
+    if (newPassword.length < 6) {
+      setPasswordMessage('Password must be at least 6 characters');
+      setPasswordStatus('error');
+      return;
+    }
+
+    setPasswordStatus('loading');
+    setPasswordMessage(null);
+
+    try {
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      await axios.post(`/api/admin/users/${passwordModal.userId}/password`, {
+        password: newPassword
+      }, {
+        headers: { 'Authorization': `Basic ${auth}` }
+      });
+
+      setPasswordStatus('success');
+      setPasswordMessage(`Password set for ${passwordModal.nickname}`);
+      setNewPassword('');
+
+      // Close modal after 2 seconds
+      setTimeout(() => {
+        setPasswordModal(null);
+        setPasswordStatus('idle');
+        setPasswordMessage(null);
+      }, 2000);
+    } catch (err: any) {
+      setPasswordStatus('error');
+      setPasswordMessage(err.response?.data?.error || 'Failed to set password');
+    }
+  };
+
+  const handleBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!credentials) return;
+
+    if (!broadcastSubject.trim() || !broadcastMessage.trim()) {
+      setBroadcastResult('Subject and message are required');
+      setBroadcastStatus('error');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to send this email to ALL ${users.length} users?`)) {
+      return;
+    }
+
+    setBroadcastStatus('loading');
+    setBroadcastResult(null);
+
+    try {
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      const response = await axios.post('/api/admin/broadcast', {
+        subject: broadcastSubject,
+        message: broadcastMessage
+      }, {
+        headers: { 'Authorization': `Basic ${auth}` }
+      });
+
+      setBroadcastStatus('success');
+      setBroadcastResult(`Email sent to ${response.data.successCount} user(s)${response.data.failCount > 0 ? `. Failed: ${response.data.failCount}` : ''}`);
+      setBroadcastSubject('');
+      setBroadcastMessage('');
+
+      // Reset status after 10 seconds
+      setTimeout(() => {
+        setBroadcastStatus('idle');
+        setBroadcastResult(null);
+      }, 10000);
+    } catch (err: any) {
+      setBroadcastStatus('error');
+      setBroadcastResult(err.response?.data?.error || 'Failed to send broadcast');
+    }
   };
 
   const handleSync = async (type: 'standings' | 'results') => {
@@ -279,6 +370,80 @@ const Admin = () => {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Broadcast Email */}
+      <div className="card-f1 mb-8">
+        <h2 className="text-2xl font-bold mb-6">Broadcast Email</h2>
+        <p className="text-f1-gray text-sm mb-4">
+          Send an email message to all registered users ({users.length} users).
+        </p>
+
+        {broadcastResult && (
+          <div className={`mb-4 px-4 py-3 rounded ${
+            broadcastStatus === 'success'
+              ? 'bg-green-900/50 border border-green-500 text-green-200'
+              : 'bg-red-900/50 border border-red-500 text-red-200'
+          }`}>
+            {broadcastResult}
+          </div>
+        )}
+
+        <form onSubmit={handleBroadcast} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Subject</label>
+            <input
+              type="text"
+              value={broadcastSubject}
+              onChange={(e) => setBroadcastSubject(e.target.value)}
+              placeholder="e.g., Season Update, New Feature Announcement"
+              className="input-f1 w-full"
+              maxLength={100}
+              required
+            />
+            <p className="text-xs text-f1-gray mt-1">
+              Will be prefixed with "F1 Prediction Poule - "
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Message</label>
+            <textarea
+              value={broadcastMessage}
+              onChange={(e) => setBroadcastMessage(e.target.value)}
+              placeholder="Write your message here. This will be sent to all users..."
+              className="input-f1 w-full h-40 resize-y"
+              maxLength={5000}
+              required
+            />
+            <p className="text-xs text-f1-gray mt-1">
+              {broadcastMessage.length}/5000 characters
+            </p>
+          </div>
+
+          <button
+            type="submit"
+            disabled={broadcastStatus === 'loading' || !broadcastSubject.trim() || !broadcastMessage.trim()}
+            className={`w-full py-3 px-4 rounded font-medium transition-colors ${
+              broadcastStatus === 'loading'
+                ? 'bg-gray-600 cursor-not-allowed text-gray-400'
+                : broadcastStatus === 'success'
+                ? 'bg-green-600 text-white'
+                : 'bg-purple-600 hover:bg-purple-700 text-white'
+            }`}
+          >
+            {broadcastStatus === 'loading' ? (
+              <span className="inline-flex items-center justify-center gap-2">
+                <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                Sending to {users.length} users...
+              </span>
+            ) : broadcastStatus === 'success' ? (
+              'Email Sent!'
+            ) : (
+              `Send Email to All Users (${users.length})`
+            )}
+          </button>
+        </form>
       </div>
 
       {/* Scheduling Documentation */}
@@ -593,7 +758,18 @@ const Admin = () => {
                     <td className="py-3 px-4 text-f1-gray text-sm">
                       {new Date(user.created_at).toLocaleDateString()}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4 space-x-2">
+                      <button
+                        onClick={() => {
+                          setPasswordModal({ userId: user.id, nickname: user.nickname });
+                          setNewPassword('');
+                          setPasswordStatus('idle');
+                          setPasswordMessage(null);
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors"
+                      >
+                        Set Password
+                      </button>
                       <button
                         onClick={() => handleDeleteUser(user.id, user.nickname)}
                         className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition-colors"
@@ -618,6 +794,64 @@ const Admin = () => {
           Total users: <span className="text-white font-bold">{users.length}</span>
         </div>
       </div>
+
+      {/* Set Password Modal */}
+      {passwordModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-f1-neutral-900 rounded-lg p-6 max-w-md w-full mx-4 border border-f1-neutral-700">
+            <h3 className="text-xl font-bold mb-4">Set Password for {passwordModal.nickname}</h3>
+
+            {passwordMessage && (
+              <div className={`mb-4 px-4 py-3 rounded ${
+                passwordStatus === 'success'
+                  ? 'bg-green-900/50 border border-green-500 text-green-200'
+                  : 'bg-red-900/50 border border-red-500 text-red-200'
+              }`}>
+                {passwordMessage}
+              </div>
+            )}
+
+            <form onSubmit={handleSetPassword} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">New Password</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password (min 6 characters)"
+                  className="input-f1 w-full"
+                  minLength={6}
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={passwordStatus === 'loading' || newPassword.length < 6}
+                  className={`flex-1 py-2 px-4 rounded font-medium transition-colors ${
+                    passwordStatus === 'loading'
+                      ? 'bg-gray-600 cursor-not-allowed text-gray-400'
+                      : passwordStatus === 'success'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  {passwordStatus === 'loading' ? 'Setting...' : passwordStatus === 'success' ? 'Done!' : 'Set Password'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPasswordModal(null)}
+                  className="px-4 py-2 rounded font-medium bg-gray-600 hover:bg-gray-700 text-white transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

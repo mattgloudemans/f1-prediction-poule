@@ -276,3 +276,47 @@ export const sendRaceReminder = async (
     console.error('Error sending race reminder:', error);
   }
 };
+
+// Send broadcast message to a user
+export const sendBroadcastEmail = async (
+  email: string,
+  nickname: string,
+  subject: string,
+  message: string
+) => {
+  // Convert newlines to <br> for HTML
+  const htmlMessage = escapeHtml(message).replace(/\n/g, '<br>');
+
+  const mailOptions = {
+    from: process.env.EMAIL_FROM,
+    to: email,
+    subject: `F1 Prediction Poule - ${subject}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #E10600;">F1 Prediction Poule 2026</h2>
+        <p>Hello ${escapeHtml(nickname)}!</p>
+        <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
+          ${htmlMessage}
+        </div>
+        <a href="${process.env.FRONTEND_URL}"
+           style="display: inline-block; background-color: #E10600; color: white;
+                  padding: 12px 24px; text-decoration: none; border-radius: 5px;
+                  margin: 20px 0;">
+          Visit F1 Prediction Poule
+        </a>
+        <p style="color: #666; font-size: 12px; margin-top: 30px;">
+          This message was sent by the F1 Prediction Poule admin team.
+        </p>
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Broadcast email sent to:', email);
+    return true;
+  } catch (error) {
+    console.error('Error sending broadcast email to', email, ':', error);
+    return false;
+  }
+};

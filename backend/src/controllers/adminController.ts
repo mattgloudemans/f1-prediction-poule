@@ -1,7 +1,11 @@
 import { Request, Response } from 'express';
+import bcrypt from 'bcrypt';
 import { query } from '../config/database';
 import * as jolpiService from '../services/jolpiService';
 import { calculateRacePoints } from './leaderboardController';
+import { sendBroadcastEmail } from '../services/emailService';
+
+const SALT_ROUNDS = 10;
 
 // Store last run info in memory (persists until server restart)
 const cronJobStatus: {
@@ -445,3 +449,102 @@ async function calculateSprintPoints(raceId: number) {
 
   console.log(`[ADMIN] Calculated sprint points for race ${raceId}`);
 }
+
+// Send broadcast email to all users
+export const sendBroadcastToAllUsers = async (req: Request, res: Response) => {
+  try {
+    const { subject, message } = req.body;
+
+    if (!subject || !message) {
+      return res.status(400).json({ error: 'Subject and message are required' });
+    }
+
+    if (subject.length > 100) {
+      return res.status(400).json({ error: 'Subject must be 100 characters or less' });
+    }
+
+    if (message.length > 5000) {
+      return res.status(400).json({ error: 'Message must be 5000 characters or less' });
+    }
+
+    // Get all users
+    const usersResult = await query('SELECT id, email, nickname FROM users ORDER BY nickname');
+    const users = usersResult.rows;
+
+    if (users.length === 0) {
+      return res.status(400).json({ error: 'No users found' });
+    }
+
+    // Send emails to all users
+    let successCount = 0;
+    let failCount = 0;
+    const failures: string[] = [];
+
+    for (const user of users) {
+      const success = await sendBroadcastEmail(user.email, user.nickname, subject, message);
+      if (success) {
+        successCount++;
+      } else {
+        failCount++;
+        failures.push(user.nickname);
+      }
+    }
+
+    console.log(`[ADMIN] Broadcast email sent: ${successCount} success, ${failCount} failed`);
+
+    res.json({
+      message: `Broadcast sent to ${successCount} user(s)`,
+      successCount,
+      failCount,
+      failures: failures.length > 0 ? failures : undefined
+    });
+  } catch (error) {
+    console.error('Send broadcast error:', error);
+    res.status(500).json({ error: 'Failed to send broadcast' });
+  }
+};
+
+// Set password for a user (admin function)
+export const setUserPassword = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // Check if user exists
+    const userResult = await query('SELECT id, nickname, email FROM users WHERE id = $1', [userId]);
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = userResult.rows[0];
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+
+    // Update user with password
+    await query('UPDATE users SET password_hash = $1 WHERE id = $2', [passwordHash, userId]);
+
+    console.log(`[ADMIN] Password set for user ${user.nickname} (${user.email})`);
+
+    res.json({
+      message: `Password set for ${user.nickname}`,
+      user: {
+        id: user.id,
+        nickname: user.nickname,
+        email: user.email
+      }
+    });
+  } catch (error) {
+    console.error('Set user password error:', error);
+    res.status(500).json({ error: 'Failed to set password' });
+  }
+};
