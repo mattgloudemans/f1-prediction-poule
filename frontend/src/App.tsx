@@ -9,7 +9,6 @@ import DriverStandings from './pages/DriverStandings';
 import Leaderboard from './pages/Leaderboard';
 import Rules from './pages/Rules';
 import Auth from './pages/Auth';
-import VerifyAuth from './pages/VerifyAuth';
 import Admin from './pages/Admin';
 import Profile from './pages/Profile';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -71,7 +70,6 @@ function App() {
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/rules" element={<Rules />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/auth/verify" element={<VerifyAuth />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/predictions" element={<MyPredictions />} />

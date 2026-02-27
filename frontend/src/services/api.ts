@@ -20,25 +20,12 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Auth - Magic Link
-export const register = (nickname: string, email: string) =>
-  api.post('/api/auth/register', { nickname, email });
-
-export const login = (email: string) =>
-  api.post('/api/auth/login', { email });
-
-export const verifyToken = (token: string) =>
-  api.get(`/api/auth/verify?token=${token}`);
-
-// Auth - Password
+// Auth
 export const registerWithPassword = (nickname: string, email: string, password: string) =>
   api.post('/api/auth/register-password', { nickname, email, password });
 
 export const loginWithPassword = (email: string, password: string) =>
   api.post('/api/auth/login-password', { email, password });
-
-export const setPassword = (password: string) =>
-  api.post('/api/auth/set-password', { password });
 
 export const getProfile = () =>
   api.get('/api/auth/profile');

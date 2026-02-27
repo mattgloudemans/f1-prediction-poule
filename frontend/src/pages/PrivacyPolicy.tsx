@@ -24,7 +24,7 @@ const PrivacyPolicy = () => {
             <h3 className="text-xl font-semibold text-f1-red mb-2">2.1 Personal Information</h3>
             <p className="mb-3">We collect the following personal information that you provide to us:</p>
             <ul className="list-disc list-inside ml-4 space-y-1">
-              <li><strong>Email Address:</strong> Used for account authentication via magic links</li>
+              <li><strong>Email Address:</strong> Used for account authentication</li>
               <li><strong>Nickname:</strong> Your display name on the leaderboard</li>
               <li><strong>Avatar Image:</strong> Optional profile picture (if you choose to upload one)</li>
               <li><strong>Race Predictions:</strong> Your top 10 driver predictions for each race</li>
@@ -44,7 +44,7 @@ const PrivacyPolicy = () => {
             <p className="mb-3">We use your information for the following purposes:</p>
             <ul className="list-disc list-inside ml-4 space-y-1">
               <li><strong>Account Management:</strong> Creating and managing your user account</li>
-              <li><strong>Authentication:</strong> Sending magic link emails for passwordless login</li>
+              <li><strong>Authentication:</strong> Verifying your identity via password-based login</li>
               <li><strong>Service Delivery:</strong> Processing and storing your race predictions</li>
               <li><strong>Leaderboard:</strong> Displaying your nickname, avatar, and points on public leaderboards</li>
               <li><strong>Email Communications:</strong> Sending prediction confirmations and race reminders</li>
@@ -80,7 +80,7 @@ const PrivacyPolicy = () => {
 
             <h3 className="text-xl font-semibold text-f1-red mb-2">4.3 Email Service</h3>
             <p>
-              We use Gmail/Google Workspace to send transactional emails (magic links, prediction confirmations).
+              We use Gmail/Google Workspace to send transactional emails (prediction confirmations, race results).
             </p>
           </section>
 

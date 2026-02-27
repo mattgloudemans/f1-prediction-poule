@@ -42,6 +42,26 @@ const runMigration = async () => {
     await query(`CREATE INDEX IF NOT EXISTS idx_sprint_results_race ON sprint_results(race_id)`);
     console.log('sprint_results table ensured.');
 
+    // Add qualifying_date column to races table
+    console.log('Checking for qualifying_date column...');
+    await query(`
+      ALTER TABLE races
+      ADD COLUMN IF NOT EXISTS qualifying_date TIMESTAMP
+    `);
+    console.log('qualifying_date column ensured.');
+
+    // Add q1, q2, q3 columns to qualifying_results table
+    console.log('Checking for q1/q2/q3 columns...');
+    await query(`ALTER TABLE qualifying_results ADD COLUMN IF NOT EXISTS q1 VARCHAR(20)`);
+    await query(`ALTER TABLE qualifying_results ADD COLUMN IF NOT EXISTS q2 VARCHAR(20)`);
+    await query(`ALTER TABLE qualifying_results ADD COLUMN IF NOT EXISTS q3 VARCHAR(20)`);
+    console.log('q1/q2/q3 columns ensured.');
+
+    // Drop magic_links table (no longer needed - password auth only)
+    console.log('Dropping magic_links table if it exists...');
+    await query(`DROP TABLE IF EXISTS magic_links`);
+    console.log('magic_links table dropped.');
+
     console.log('Database migrations completed successfully!');
     process.exit(0);
   } catch (error) {

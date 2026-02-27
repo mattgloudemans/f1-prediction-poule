@@ -31,6 +31,9 @@ CREATE TABLE IF NOT EXISTS qualifying_results (
   race_id INTEGER NOT NULL REFERENCES races(id) ON DELETE CASCADE,
   driver_id INTEGER NOT NULL REFERENCES drivers(id) ON DELETE CASCADE,
   position INTEGER NOT NULL,
+  q1 VARCHAR(20),
+  q2 VARCHAR(20),
+  q3 VARCHAR(20),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(race_id, position),
@@ -46,6 +49,7 @@ CREATE TABLE IF NOT EXISTS races (
   circuit_name VARCHAR(255) NOT NULL,
   country VARCHAR(100) NOT NULL,
   race_date TIMESTAMP NOT NULL,
+  qualifying_date TIMESTAMP,
   race_time VARCHAR(20),
   race_type VARCHAR(20) DEFAULT 'main', -- 'sprint' or 'main'
   status VARCHAR(50) DEFAULT 'upcoming', -- upcoming, in_progress, provisional, completed
@@ -126,16 +130,6 @@ CREATE TABLE IF NOT EXISTS sprint_predictions (
   UNIQUE(user_id, race_id)
 );
 
--- Magic links for authentication
-CREATE TABLE IF NOT EXISTS magic_links (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  token VARCHAR(500) NOT NULL UNIQUE,
-  expires_at TIMESTAMP NOT NULL,
-  used BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_drivers_season ON drivers(season);
@@ -146,8 +140,6 @@ CREATE INDEX IF NOT EXISTS idx_predictions_race ON predictions(race_id);
 CREATE INDEX IF NOT EXISTS idx_predictions_user_race ON predictions(user_id, race_id);
 CREATE INDEX IF NOT EXISTS idx_race_results_race ON race_results(race_id);
 CREATE INDEX IF NOT EXISTS idx_sprint_results_race ON sprint_results(race_id);
-CREATE INDEX IF NOT EXISTS idx_magic_links_token ON magic_links(token);
-CREATE INDEX IF NOT EXISTS idx_magic_links_user ON magic_links(user_id);
 CREATE INDEX IF NOT EXISTS idx_qualifying_results_race ON qualifying_results(race_id);
 CREATE INDEX IF NOT EXISTS idx_races_type ON races(race_type);
 CREATE INDEX IF NOT EXISTS idx_sprint_predictions_user ON sprint_predictions(user_id);

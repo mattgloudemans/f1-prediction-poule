@@ -23,42 +23,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export const sendMagicLink = async (email: string, token: string, nickname: string) => {
-  const magicLink = `${process.env.FRONTEND_URL}/auth/verify?token=${token}`;
-
-  const mailOptions = {
-    from: process.env.EMAIL_FROM,
-    to: email,
-    subject: 'Welcome to F1 Prediction Poule - Login Link',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #E10600;">F1 Prediction Poule 2026</h2>
-        <p>Hello ${escapeHtml(nickname)}!</p>
-        <p>Click the button below to access your account:</p>
-        <a href="${magicLink}"
-           style="display: inline-block; background-color: #E10600; color: white;
-                  padding: 12px 24px; text-decoration: none; border-radius: 5px;
-                  margin: 20px 0;">
-          Access My Account
-        </a>
-        <p>Or copy this link: <a href="${magicLink}">${magicLink}</a></p>
-        <p>This link will expire in 1 hour.</p>
-        <p style="color: #666; font-size: 12px; margin-top: 30px;">
-          If you didn't request this email, you can safely ignore it.
-        </p>
-      </div>
-    `,
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log('Magic link email sent to:', email);
-  } catch (error) {
-    console.error('Error sending email:', error);
-    throw new Error('Failed to send email');
-  }
-};
-
 export const sendPredictionConfirmation = async (
   email: string,
   nickname: string,
@@ -274,6 +238,45 @@ export const sendRaceReminder = async (
     console.log('Race reminder email sent to:', email);
   } catch (error) {
     console.error('Error sending race reminder:', error);
+  }
+};
+
+// Send "The results are in!" email after final results are processed
+export const sendResultsAreInEmail = async (
+  email: string,
+  nickname: string,
+  raceName: string
+) => {
+  const leaderboardUrl = `${process.env.FRONTEND_URL}/leaderboard`;
+
+  const mailOptions = {
+    from: process.env.EMAIL_FROM,
+    to: email,
+    subject: `The results are in! - ${raceName}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #E10600;">The results are in!</h2>
+        <p>Hello ${escapeHtml(nickname)}!</p>
+        <p>The final results for <strong>${escapeHtml(raceName)}</strong> have been processed and the leaderboard has been updated.</p>
+        <p>Check out where you stand!</p>
+        <a href="${leaderboardUrl}"
+           style="display: inline-block; background-color: #E10600; color: white;
+                  padding: 12px 24px; text-decoration: none; border-radius: 5px;
+                  margin: 20px 0;">
+          View Leaderboard
+        </a>
+        <p style="color: #666; font-size: 12px; margin-top: 30px;">
+          See you at the next race! 🏎️
+        </p>
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Results-are-in email sent to:', email);
+  } catch (error) {
+    console.error('Error sending results-are-in email to', email, ':', error);
   }
 };
 

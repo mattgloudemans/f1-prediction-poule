@@ -49,8 +49,7 @@ const About = () => {
               <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
                 <h3 className="text-lg font-bold text-f1-red mb-2">1. Create Your Account</h3>
                 <p>
-                  Sign up with just your email address and choose a nickname. No password required - we use
-                  secure magic link authentication sent directly to your email.
+                  Sign up with your email address, choose a nickname, and set a password to get started.
                 </p>
               </div>
 
@@ -105,7 +104,7 @@ const About = () => {
             </p>
             <ul className="list-disc list-inside ml-4 space-y-1">
               <li><strong>Real-time Data:</strong> We integrate with official F1 data sources (OpenF1 API and Jolpi Ergast API) to provide accurate race schedules, driver information, and results</li>
-              <li><strong>Secure Authentication:</strong> Passwordless magic link authentication ensures your account is secure without the hassle of remembering passwords</li>
+              <li><strong>Secure Authentication:</strong> Password-based authentication keeps your account secure</li>
               <li><strong>Mobile-Friendly:</strong> Our responsive design works seamlessly on desktop, tablet, and mobile devices</li>
               <li><strong>Fast Performance:</strong> Built with React, TypeScript, and modern web technologies for optimal speed</li>
             </ul>
