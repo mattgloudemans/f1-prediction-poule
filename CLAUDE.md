@@ -108,7 +108,6 @@ npm run predictions:copy-missing  # Copy predictions for users who forgot
 │   │   │   ├── MyPredictions.tsx    # User's prediction history
 │   │   │   ├── Stats.tsx            # Session results (FP, Quali, Race)
 │   │   │   ├── Auth.tsx             # Login/register
-│   │   │   ├── VerifyAuth.tsx       # Magic link verification
 │   │   │   ├── Profile.tsx          # User profile
 │   │   │   ├── Admin.tsx            # Admin panel
 │   │   │   ├── Rules.tsx
@@ -140,7 +139,7 @@ npm run predictions:copy-missing  # Copy predictions for users who forgot
 - Two-stage results: provisional (immediate) then final (24h later for penalties)
 
 ### Authentication
-- Magic link email authentication (no passwords)
+- Password-based authentication
 - JWT tokens stored in localStorage
 - Auth middleware: `import { authenticate } from './middleware/auth'`
 

@@ -41,7 +41,6 @@ The volume stores all application data:
 - Predictions
 - Race data
 - Driver standings
-- Magic links (authentication tokens)
 - Leaderboard points
 
 ## Backup & Restore

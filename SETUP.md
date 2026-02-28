@@ -229,8 +229,7 @@ Use your preferred hosting service (AWS, DigitalOcean, etc.) with Docker support
 
 ### Authentication
 - `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Request magic link
-- `GET /api/auth/verify?token=TOKEN` - Verify magic link
+- `POST /api/auth/login` - Login with password
 - `GET /api/auth/profile` - Get user profile (requires auth)
 
 ### Races

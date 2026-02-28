@@ -246,7 +246,6 @@ const Rules = () => {
           <h2 className="text-2xl font-bold mb-4 text-f1-red"><BellIcon />Notifications</h2>
           <ul className="list-disc list-inside space-y-2">
             <li>Email confirmation when you register</li>
-            <li>Magic link sent to your email for easy login (no password needed!)</li>
             <li>Confirmation email every time you submit or update predictions</li>
             <li>Reminder emails before upcoming races (if enabled)</li>
           </ul>

@@ -29,6 +29,7 @@ const Admin = () => {
 
   // Set password state
   const [passwordModal, setPasswordModal] = useState<{ userId: number; nickname: string } | null>(null);
+  const [adminPasswordModal, setAdminPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [passwordStatus, setPasswordStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
@@ -143,6 +144,45 @@ const Admin = () => {
     } catch (err: any) {
       setPasswordStatus('error');
       setPasswordMessage(err.response?.data?.error || 'Failed to set password');
+    }
+  };
+
+  const handleChangeAdminPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!credentials) return;
+
+    if (newPassword.length < 6) {
+      setPasswordMessage('Password must be at least 6 characters');
+      setPasswordStatus('error');
+      return;
+    }
+
+    setPasswordStatus('loading');
+    setPasswordMessage(null);
+
+    try {
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      await axios.post('/api/admin/admin-password', {
+        password: newPassword
+      }, {
+        headers: { 'Authorization': `Basic ${auth}` }
+      });
+
+      // Update stored credentials with new password
+      setCredentials({ ...credentials, password: newPassword });
+
+      setPasswordStatus('success');
+      setPasswordMessage('Admin password updated successfully');
+      setNewPassword('');
+
+      setTimeout(() => {
+        setAdminPasswordModal(false);
+        setPasswordStatus('idle');
+        setPasswordMessage(null);
+      }, 2000);
+    } catch (err: any) {
+      setPasswordStatus('error');
+      setPasswordMessage(err.response?.data?.error || 'Failed to change admin password');
     }
   };
 
@@ -588,10 +628,6 @@ const Admin = () => {
               </thead>
               <tbody className="text-f1-gray">
                 <tr className="border-b border-f1-neutral-700/50">
-                  <td className="py-2 px-3 font-medium text-white">Magic Link</td>
-                  <td className="py-2 px-3">User login/register</td>
-                  <td className="py-2 px-3">Authentication link (expires 1 hour)</td>
-                </tr>
                 <tr className="border-b border-f1-neutral-700/50">
                   <td className="py-2 px-3 font-medium text-white">Prediction Confirmation</td>
                   <td className="py-2 px-3">User saves prediction</td>
@@ -744,6 +780,30 @@ const Admin = () => {
                 </tr>
               </thead>
               <tbody>
+                {/* Admin user row - cannot be deleted */}
+                <tr className="border-b border-f1-neutral-800 bg-yellow-900/10">
+                  <td className="py-3 px-4 text-yellow-500">-</td>
+                  <td className="py-3 px-4 font-medium">
+                    <span className="text-yellow-400">{credentials?.username || 'Admin'}</span>
+                    <span className="ml-2 text-xs bg-yellow-600/30 text-yellow-400 px-2 py-0.5 rounded">ADMIN</span>
+                  </td>
+                  <td className="py-3 px-4 text-f1-gray">-</td>
+                  <td className="py-3 px-4 text-f1-gray">-</td>
+                  <td className="py-3 px-4 text-f1-gray">-</td>
+                  <td className="py-3 px-4 space-x-2">
+                    <button
+                      onClick={() => {
+                        setAdminPasswordModal(true);
+                        setNewPassword('');
+                        setPasswordStatus('idle');
+                        setPasswordMessage(null);
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors"
+                    >
+                      Change Password
+                    </button>
+                  </td>
+                </tr>
                 {users.map((user) => (
                   <tr
                     key={user.id}
@@ -791,9 +851,67 @@ const Admin = () => {
         )}
 
         <div className="mt-6 text-sm text-f1-gray">
-          Total users: <span className="text-white font-bold">{users.length}</span>
+          Total users: <span className="text-white font-bold">{users.length}</span> + <span className="text-yellow-400 font-bold">1 admin</span>
         </div>
       </div>
+
+      {/* Admin Password Modal */}
+      {adminPasswordModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-f1-neutral-900 rounded-lg p-6 max-w-md w-full mx-4 border border-f1-neutral-700">
+            <h3 className="text-xl font-bold mb-4">Change Admin Password</h3>
+
+            {passwordMessage && (
+              <div className={`mb-4 px-4 py-3 rounded ${
+                passwordStatus === 'success'
+                  ? 'bg-green-900/50 border border-green-500 text-green-200'
+                  : 'bg-red-900/50 border border-red-500 text-red-200'
+              }`}>
+                {passwordMessage}
+              </div>
+            )}
+
+            <form onSubmit={handleChangeAdminPassword} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">New Admin Password</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password (min 6 characters)"
+                  className="input-f1 w-full"
+                  minLength={6}
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={passwordStatus === 'loading' || newPassword.length < 6}
+                  className={`flex-1 py-2 px-4 rounded font-medium transition-colors ${
+                    passwordStatus === 'loading'
+                      ? 'bg-gray-600 cursor-not-allowed text-gray-400'
+                      : passwordStatus === 'success'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  {passwordStatus === 'loading' ? 'Updating...' : passwordStatus === 'success' ? 'Done!' : 'Update Password'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAdminPasswordModal(false)}
+                  className="px-4 py-2 rounded font-medium bg-gray-600 hover:bg-gray-700 text-white transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Set Password Modal */}
       {passwordModal && (

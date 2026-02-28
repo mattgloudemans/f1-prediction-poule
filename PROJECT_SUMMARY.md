@@ -13,7 +13,7 @@ f1-prediction-poule/
 │   │   ├── config/
 │   │   │   └── database.ts           # PostgreSQL connection
 │   │   ├── controllers/              # Request handlers
-│   │   │   ├── authController.ts     # User registration & magic link auth
+│   │   │   ├── authController.ts     # User registration & password auth
 │   │   │   ├── driverController.ts   # Driver management
 │   │   │   ├── leaderboardController.ts  # User standings & scoring
 │   │   │   ├── predictionController.ts   # Prediction submission
@@ -62,7 +62,7 @@ f1-prediction-poule/
 │   │   │   ├── Leaderboard.tsx      # User standings with podium
 │   │   │   ├── RaceOverview.tsx     # Race calendar
 │   │   │   ├── Rules.tsx            # Game rules
-│   │   │   └── VerifyAuth.tsx       # Magic link verification
+│   │   │   └── Profile.tsx          # User profile
 │   │   ├── services/
 │   │   │   └── api.ts               # API client with Axios
 │   │   ├── App.tsx                  # Main app component
@@ -87,8 +87,7 @@ f1-prediction-poule/
 ## ✨ Implemented Features
 
 ### 1. User Management
-- ✅ Email-based registration (no password required)
-- ✅ Magic link authentication via email
+- ✅ Email-based registration with password
 - ✅ JWT session management
 - ✅ User profile with avatar upload
 - ✅ Email confirmations for all actions
@@ -167,7 +166,6 @@ f1-prediction-poule/
 
 ### 11. Email System
 - ✅ Nodemailer with Gmail
-- ✅ Magic link delivery
 - ✅ Prediction confirmations
 - ✅ Race reminders (optional)
 - ✅ HTML-formatted emails
@@ -192,7 +190,7 @@ f1-prediction-poule/
 - **Framework:** Express
 - **Language:** TypeScript
 - **Database:** PostgreSQL 15
-- **Authentication:** JWT + Magic Links
+- **Authentication:** JWT + Password
 - **Email:** Nodemailer (Gmail)
 - **File Upload:** Multer
 - **Security:** Helmet, Rate Limiting, CORS
@@ -254,8 +252,7 @@ docker compose exec backend npm run seed
 
 ### 3. Testing Checklist
 - [ ] User registration works
-- [ ] Magic link emails are received
-- [ ] Login via magic link works
+- [ ] Login with password works
 - [ ] Homepage displays next race
 - [ ] Drag-and-drop prediction works
 - [ ] Predictions can be submitted
@@ -286,7 +283,6 @@ docker compose exec backend npm run seed
 3. **races** - Race calendar (season, round, name, date, status)
 4. **predictions** - User predictions (user, race, 10 positions)
 5. **race_results** - Actual race results (race, driver, position, points)
-6. **magic_links** - Authentication tokens (user, token, expiry)
 
 ### Key Features
 - Automatic timestamps (created_at, updated_at)
@@ -303,12 +299,6 @@ docker compose exec backend npm run seed
 - **Code Comments** - Throughout codebase
 
 ## 🎯 Design Decisions
-
-### Why Magic Links?
-- Better UX (no password to remember)
-- More secure (no password to steal)
-- Easier implementation
-- Email verification built-in
 
 ### Why OpenF1 API Primary?
 - Rich telemetry data
