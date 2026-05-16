@@ -12,7 +12,7 @@ export const getQualifyingOrder = async (req: Request, res: Response) => {
 
     // First check if we have stored qualifying results
     const storedQualifying = await query(
-      `SELECT qr.position, d.id, d.driver_number, d.name, d.name_acronym, d.team
+      `SELECT qr.position, qr.q1, qr.q2, qr.q3, d.id, d.driver_number, d.name, d.name_acronym, d.team
        FROM qualifying_results qr
        JOIN drivers d ON qr.driver_id = d.id
        WHERE qr.race_id = $1
@@ -23,6 +23,7 @@ export const getQualifyingOrder = async (req: Request, res: Response) => {
     if (storedQualifying.rows.length > 0) {
       return res.json({
         source: 'qualifying',
+        hasQualifyingResults: true,
         drivers: storedQualifying.rows
       });
     }
@@ -51,21 +52,22 @@ export const getQualifyingOrder = async (req: Request, res: Response) => {
 
         const orderedDrivers = qualifyingResults.map((q, index) => {
           const driver = driverMap.get(parseInt(q.number));
-          return driver ? { ...driver, position: index + 1 } : null;
+          return driver ? { ...driver, position: index + 1, q1: q.Q1 || null, q2: q.Q2 || null, q3: q.Q3 || null } : null;
         }).filter(d => d !== null);
 
-        // Store qualifying results for future use
+        // Store qualifying results for future use (with Q1/Q2/Q3 times)
         for (const driver of orderedDrivers) {
           await query(
-            `INSERT INTO qualifying_results (race_id, driver_id, position)
-             VALUES ($1, $2, $3)
-             ON CONFLICT (race_id, driver_id) DO UPDATE SET position = $3`,
-            [raceId, driver.id, driver.position]
+            `INSERT INTO qualifying_results (race_id, driver_id, position, q1, q2, q3)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (race_id, driver_id) DO UPDATE SET position = EXCLUDED.position, q1 = EXCLUDED.q1, q2 = EXCLUDED.q2, q3 = EXCLUDED.q3`,
+            [raceId, driver.id, driver.position, driver.q1, driver.q2, driver.q3]
           );
         }
 
         return res.json({
           source: 'qualifying',
+          hasQualifyingResults: true,
           drivers: orderedDrivers
         });
       }
@@ -95,6 +97,7 @@ export const getQualifyingOrder = async (req: Request, res: Response) => {
       if (previousResults.rows.length > 0) {
         return res.json({
           source: 'previous_race',
+          hasQualifyingResults: false,
           drivers: previousResults.rows
         });
       }
@@ -111,6 +114,7 @@ export const getQualifyingOrder = async (req: Request, res: Response) => {
 
     res.json({
       source: 'championship',
+      hasQualifyingResults: false,
       drivers: championshipOrder.rows.map((d: any, index: number) => ({
         ...d,
         position: index + 1
@@ -242,15 +246,21 @@ export const syncRaces = async (req: Request, res: Response) => {
       const roundNum = parseInt(race.round);
       const hasSprint = SPRINT_ROUNDS_2026.includes(roundNum);
 
+      // Build qualifying date if available
+      const qualifyingDate = race.Qualifying
+        ? new Date(`${race.Qualifying.date}T${race.Qualifying.time}`)
+        : null;
+
       // Insert main race
       await query(
-        `INSERT INTO races (season, round, race_name, circuit_name, country, race_date, race_time, race_type, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `INSERT INTO races (season, round, race_name, circuit_name, country, race_date, qualifying_date, race_time, race_type, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          ON CONFLICT (season, round, race_type) DO UPDATE SET
            race_name = EXCLUDED.race_name,
            circuit_name = EXCLUDED.circuit_name,
            country = EXCLUDED.country,
            race_date = EXCLUDED.race_date,
+           qualifying_date = EXCLUDED.qualifying_date,
            race_time = EXCLUDED.race_time`,
         [
           parseInt(race.season),
@@ -259,6 +269,7 @@ export const syncRaces = async (req: Request, res: Response) => {
           race.Circuit.circuitName,
           race.Circuit.Location.country,
           raceDate,
+          qualifyingDate,
           race.time,
           'main',
           new Date() > raceDate ? 'completed' : 'upcoming'

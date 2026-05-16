@@ -50,6 +50,7 @@ RUN mkdir -p ./uploads
 COPY crontab /etc/crontabs/root
 COPY sync-driver-standings.sh /app/sync-driver-standings.sh
 COPY sync-race-results.sh /app/sync-race-results.sh
+COPY sync-qualifying-results.sh /app/sync-qualifying-results.sh
 COPY send-provisional-results.sh /app/send-provisional-results.sh
 COPY process-final-results.sh /app/process-final-results.sh
 COPY copy-missing-predictions.sh /app/copy-missing-predictions.sh
@@ -57,7 +58,7 @@ COPY reset-yearly-points.sh /app/reset-yearly-points.sh
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 
 # Make scripts executable
-RUN chmod +x /app/sync-driver-standings.sh /app/sync-race-results.sh /app/send-provisional-results.sh /app/process-final-results.sh /app/copy-missing-predictions.sh /app/reset-yearly-points.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/sync-driver-standings.sh /app/sync-race-results.sh /app/sync-qualifying-results.sh /app/send-provisional-results.sh /app/process-final-results.sh /app/copy-missing-predictions.sh /app/reset-yearly-points.sh /app/docker-entrypoint.sh
 
 # Create log directory for cron
 RUN mkdir -p /var/log && touch /var/log/cron.log

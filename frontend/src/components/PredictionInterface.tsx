@@ -23,6 +23,9 @@ interface Driver {
   name_acronym?: string;
   team: string;
   position?: number;
+  q1?: string;
+  q2?: string;
+  q3?: string;
 }
 
 interface DragItem {
@@ -208,6 +211,9 @@ const PredictionInterface = ({ raceId }: PredictionInterfaceProps) => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
+  const [hasQualifyingResults, setHasQualifyingResults] = useState(false);
+  const [orderSource, setOrderSource] = useState<string>('');
+  const [showQualiDetails, setShowQualiDetails] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -217,8 +223,10 @@ const PredictionInterface = ({ raceId }: PredictionInterfaceProps) => {
     try {
       // Fetch qualifying order
       const qualifyingResponse = await getQualifyingOrder(raceId);
-      const { drivers } = qualifyingResponse.data;
+      const { drivers, source, hasQualifyingResults: hasQuali } = qualifyingResponse.data;
       setQualifyingDrivers(drivers);
+      setOrderSource(source || '');
+      setHasQualifyingResults(hasQuali || false);
 
       // Try to fetch existing prediction
       try {
@@ -328,7 +336,34 @@ const PredictionInterface = ({ raceId }: PredictionInterfaceProps) => {
           {/* Left Column - Qualifying Order */}
           <RemoveZone onDrop={handleRemoveFromGrid}>
             <div>
-              <h2 className="text-sm font-bold text-f1-red mb-2">Qualifying results</h2>
+              <h2 className="text-sm font-bold text-f1-red mb-1">
+                {orderSource === 'qualifying' ? 'Qualifying Results' : orderSource === 'previous_race' ? 'Previous Race Order' : 'Championship Order'}
+              </h2>
+              {hasQualifyingResults && (
+                <button
+                  onClick={() => setShowQualiDetails(!showQualiDetails)}
+                  className="text-xs text-green-400 hover:text-green-300 mb-1 flex items-center gap-1"
+                >
+                  <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
+                  {showQualiDetails ? 'Hide times' : 'Show times'}
+                </button>
+              )}
+              {hasQualifyingResults && showQualiDetails && (
+                <div className="mb-2 bg-gray-900 rounded-lg p-2 text-xs max-h-[200px] overflow-y-auto">
+                  <div className="grid grid-cols-[24px_1fr_auto] gap-x-1 gap-y-0.5">
+                    {qualifyingDrivers.map((driver) => {
+                      const bestTime = driver.q3 || driver.q2 || driver.q1 || '-';
+                      return (
+                        <div key={driver.id} className="contents">
+                          <span className="text-f1-gray font-mono">P{driver.position}</span>
+                          <span className="text-white font-bold truncate">{driver.name_acronym || driver.name.substring(0, 3).toUpperCase()}</span>
+                          <span className="text-green-400 font-mono">{bestTime}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <div className="space-y-1 max-h-[450px] overflow-y-auto pr-1">
                 {qualifyingDrivers.map((driver) => (
                   <QualifyingDriverCard

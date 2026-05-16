@@ -8,6 +8,10 @@
 # Sync race results every Monday at 3:00 AM UTC
 0 3 * * 1 /app/sync-race-results.sh
 
+# SYNC QUALIFYING RESULTS: Run hourly on Fri+Sat (qualifying days)
+# Picks up qualifying data ~2 hours after session ends
+0 * * * 5,6 /app/sync-qualifying-results.sh
+
 # COPY MISSING PREDICTIONS: Check every 2 minutes on race days (Sun 12:00-18:00 UTC)
 # Copies last prediction for users who forgot to submit
 */2 12-18 * * 0 /app/copy-missing-predictions.sh

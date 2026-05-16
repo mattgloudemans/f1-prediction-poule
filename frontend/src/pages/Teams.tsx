@@ -37,7 +37,7 @@ const Teams = () => {
       engine: 'Red Bull Powertrains',
       drivers: [
         { number: 1, name: 'Max Verstappen', role: 'Race Driver' },
-        { number: 22, name: 'Yuki Tsunoda', role: 'Race Driver' },
+        { number: 36, name: 'Arvid Lindblad', role: 'Race Driver' },
       ],
       reserves: [
         { name: 'Isack Hadjar', role: 'Reserve Driver' },

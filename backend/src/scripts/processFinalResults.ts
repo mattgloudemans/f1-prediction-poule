@@ -1,7 +1,7 @@
 import { query } from '../config/database';
 import * as jolpiService from '../services/jolpiService';
 import { calculateRacePoints } from '../controllers/leaderboardController';
-import { sendFinalResults } from '../services/emailService';
+import { sendFinalResults, sendResultsAreInEmail } from '../services/emailService';
 
 async function processFinalResults() {
   try {
@@ -149,6 +149,17 @@ async function processFinalResults() {
             );
           } catch (emailError) {
             console.error(`[CRON] Error sending final results email to ${pred.email}:`, emailError);
+          }
+        }
+
+        // Send "The results are in!" email to all users
+        const allUsers = await query('SELECT email, nickname FROM users');
+        console.log(`[CRON] Sending "The results are in!" email to ${allUsers.rows.length} users...`);
+        for (const user of allUsers.rows) {
+          try {
+            await sendResultsAreInEmail(user.email, user.nickname, race.race_name);
+          } catch (emailError) {
+            console.error(`[CRON] Error sending results-are-in email to ${user.email}:`, emailError);
           }
         }
 

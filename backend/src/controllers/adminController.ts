@@ -504,6 +504,46 @@ export const sendBroadcastToAllUsers = async (req: Request, res: Response) => {
   }
 };
 
+// Change admin password
+export const changeAdminPassword = async (req: Request, res: Response) => {
+  try {
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // Update ADMIN_PASSWORD in environment
+    process.env.ADMIN_PASSWORD = password;
+
+    // Also update the .env file if it exists
+    const fs = require('fs');
+    const path = require('path');
+    const envPath = path.resolve(__dirname, '../../.env');
+
+    if (fs.existsSync(envPath)) {
+      let envContent = fs.readFileSync(envPath, 'utf-8');
+      if (envContent.match(/^ADMIN_PASSWORD=.*/m)) {
+        envContent = envContent.replace(/^ADMIN_PASSWORD=.*/m, `ADMIN_PASSWORD=${password}`);
+      } else {
+        envContent += `\nADMIN_PASSWORD=${password}`;
+      }
+      fs.writeFileSync(envPath, envContent);
+    }
+
+    console.log('[ADMIN] Admin password changed');
+
+    res.json({ message: 'Admin password updated successfully' });
+  } catch (error) {
+    console.error('Change admin password error:', error);
+    res.status(500).json({ error: 'Failed to change admin password' });
+  }
+};
+
 // Set password for a user (admin function)
 export const setUserPassword = async (req: Request, res: Response) => {
   try {

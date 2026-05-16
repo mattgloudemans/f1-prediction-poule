@@ -6,7 +6,8 @@ import {
   triggerDriverStandingsSync,
   triggerRaceResultsSync,
   sendBroadcastToAllUsers,
-  setUserPassword
+  setUserPassword,
+  changeAdminPassword
 } from '../controllers/adminController';
 import { authenticateAdmin } from '../middleware/adminAuth';
 
@@ -16,6 +17,7 @@ const router = express.Router();
 router.get('/users', authenticateAdmin, getAllUsers);
 router.delete('/users/:id', authenticateAdmin, deleteUser);
 router.post('/users/:userId/password', authenticateAdmin, setUserPassword);
+router.post('/admin-password', authenticateAdmin, changeAdminPassword);
 
 // Cronjob management
 router.get('/cronjobs', authenticateAdmin, getCronJobs);

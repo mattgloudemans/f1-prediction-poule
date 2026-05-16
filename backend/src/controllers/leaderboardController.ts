@@ -4,11 +4,57 @@ import { query } from '../config/database';
 export const getLeaderboard = async (req: Request, res: Response) => {
   try {
     const result = await query(
-      `SELECT
-        id, nickname, avatar_url, total_points,
-        ROW_NUMBER() OVER (ORDER BY total_points DESC) as rank
-       FROM users
-       ORDER BY total_points DESC, nickname ASC`
+      `WITH current_season AS (
+        SELECT EXTRACT(YEAR FROM CURRENT_DATE)::int AS season
+      ),
+      last_completed_race AS (
+        SELECT id FROM races
+        WHERE status IN ('completed', 'provisional')
+          AND season = (SELECT season FROM current_season)
+        ORDER BY race_date DESC
+        LIMIT 1
+      ),
+      last_race_points AS (
+        SELECT user_id, points_earned
+        FROM predictions WHERE race_id = (SELECT id FROM last_completed_race)
+        UNION ALL
+        SELECT user_id, points_earned
+        FROM sprint_predictions WHERE race_id = (SELECT id FROM last_completed_race)
+      ),
+      last_race_ranked AS (
+        SELECT user_id, points_earned,
+          RANK() OVER (ORDER BY points_earned DESC) as last_race_rank
+        FROM last_race_points
+      ),
+      best_race AS (
+        SELECT DISTINCT ON (user_id)
+          user_id, points_earned as best_points, race_id
+        FROM (
+          SELECT p.user_id, p.points_earned, p.race_id
+          FROM predictions p
+          JOIN races r ON p.race_id = r.id
+          WHERE p.points_earned > 0 AND r.season = (SELECT season FROM current_season)
+          UNION ALL
+          SELECT sp.user_id, sp.points_earned, sp.race_id
+          FROM sprint_predictions sp
+          JOIN races r ON sp.race_id = r.id
+          WHERE sp.points_earned > 0 AND r.season = (SELECT season FROM current_season)
+        ) all_preds
+        ORDER BY user_id, points_earned DESC
+      )
+      SELECT
+        u.id, u.nickname, u.avatar_url, u.total_points,
+        ROW_NUMBER() OVER (ORDER BY u.total_points DESC, u.nickname ASC) as rank,
+        COALESCE(lr.points_earned, 0) as last_race_points,
+        lr.last_race_rank,
+        COALESCE(br.best_points, 0) as best_race_points,
+        r.race_name as best_race_name,
+        MAX(u.total_points) OVER () - u.total_points as diff_to_leader
+      FROM users u
+      LEFT JOIN last_race_ranked lr ON u.id = lr.user_id
+      LEFT JOIN best_race br ON u.id = br.user_id
+      LEFT JOIN races r ON br.race_id = r.id
+      ORDER BY u.total_points DESC, u.nickname ASC`
     );
 
     res.json(result.rows);

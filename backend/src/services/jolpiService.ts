@@ -30,6 +30,10 @@ export interface JolpiRace {
   };
   date: string;
   time?: string;
+  Qualifying?: {
+    date: string;
+    time: string;
+  };
 }
 
 export interface JolpiDriver {

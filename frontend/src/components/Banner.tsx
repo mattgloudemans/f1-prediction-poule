@@ -34,8 +34,8 @@ const Banner = ({ nextRaceDate, nextRaceName, isSprint }: BannerProps) => {
   }, [nextRaceDate]);
 
   const formatRaceTime = (date: Date) => {
-    return new Date(date).toLocaleString('en-US', {
-      timeZone: 'America/New_York',
+    return new Date(date).toLocaleString('nl-NL', {
+      timeZone: 'Europe/Amsterdam',
       weekday: 'long',
       month: 'long',
       day: 'numeric',
@@ -46,7 +46,7 @@ const Banner = ({ nextRaceDate, nextRaceName, isSprint }: BannerProps) => {
   };
 
   const bannerText = nextRaceName && nextRaceDate
-    ? `${isSprint ? '🏃' : '🏁'} NEXT ${isSprint ? 'SPRINT' : 'RACE'}: ${nextRaceName} • COUNTDOWN: ${timeLeft} • ${isSprint ? 'SPRINT' : 'RACE'} TIME (EST): ${formatRaceTime(new Date(nextRaceDate))} ${isSprint ? '🏃' : '🏁'}`
+    ? `${isSprint ? '🏃' : '🏁'} NEXT ${isSprint ? 'SPRINT' : 'RACE'}: ${nextRaceName} • COUNTDOWN: ${timeLeft} • ${isSprint ? 'SPRINT' : 'RACE'} TIME: ${formatRaceTime(new Date(nextRaceDate))} ${isSprint ? '🏃' : '🏁'}`
     : 'Loading next race information...';
 
   return (
